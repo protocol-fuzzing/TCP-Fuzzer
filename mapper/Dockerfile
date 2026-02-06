@@ -17,4 +17,4 @@ RUN dos2unix ./start.sh
 RUN pip3 install -r requirements.txt
 
 
-ENTRYPOINT bash start.sh
+ENTRYPOINT bash start_docker.sh
