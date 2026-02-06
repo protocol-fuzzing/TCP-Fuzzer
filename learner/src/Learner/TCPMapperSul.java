@@ -1,7 +1,10 @@
 package Learner;
 
-import Learner.TCPExecutionContext;
-import Learner.TCPState;
+import java.io.IOException;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.concurrent.ThreadLocalRandom;
+
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSul;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulAdapter;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SulConfig;
@@ -10,10 +13,6 @@ import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.sulwra
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.Mapper;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
-import java.io.IOException;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class TCPMapperSul
     implements
@@ -114,7 +113,7 @@ public class TCPMapperSul
     private static class MapperProcessHandler extends ProcessHandler {
 
         protected MapperProcessHandler(String command, long startWait) {
-            super(command, startWait);
+            super(command);
         }
     }
 
@@ -145,16 +144,16 @@ public class TCPMapperSul
 
             if (split[2].contains("R")) {
                 // If reset is recevied we reset sequence and acknowledgement numbers                
-                this.startSeq = this.startSeq + ThreadLocalRandom.current().nextInt(10000, 30000);
-                this.context.getState().setSeq(this.startSeq);
-                this.context.getState().setAck(this.startSeq + 1);
+                startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
+                context.getState().setSeq(startSeq);
+                context.getState().setAck(startSeq + 1);
             } else if (split[2].contains("A")) {
                 // Update seq and ack if ack number is valid
-                this.context.getState().setSeq(Long.parseLong(split[1]));
-                this.context.getState().setAck(Long.parseLong(split[0]) + 1);
+                context.getState().setSeq(Long.parseLong(split[1]));
+                context.getState().setAck(Long.parseLong(split[0]) + 1);
             } else {
                 // otherwise we just update our ACK (since input ack is not valid)
-                this.context.getState().setAck(Long.parseLong(split[0]) + 1);
+                context.getState().setAck(Long.parseLong(split[0]) + 1);
             }
 
             return new TCPOutput(

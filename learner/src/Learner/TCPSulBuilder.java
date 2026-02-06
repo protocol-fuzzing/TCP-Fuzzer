@@ -2,6 +2,8 @@ package Learner;
 
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSul;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulBuilder;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulWrapper;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulWrapperStandard;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SulConfig;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
@@ -15,13 +17,10 @@ public class TCPSulBuilder
             ExecutionContext<TCPInput, TCPOutput, String>
         > {
 
-    @Override
-    public AbstractSul<
-        TCPInput,
-        TCPOutput,
-        ExecutionContext<TCPInput, TCPOutput, String>
-    > build(SulConfig sulConfig, CleanupTasks cleanupTasks) {
-        try {
+	@Override
+	public AbstractSul<TCPInput, TCPOutput, ExecutionContext<TCPInput, TCPOutput, String>> buildSul(SulConfig sulConfig,
+			CleanupTasks cleanupTasks) {
+		try {
             AbstractSul<
                 TCPInput,
                 TCPOutput,
@@ -43,5 +42,11 @@ public class TCPSulBuilder
         } catch (IOException e) {
             throw new MapperException("Error creating TCPMapperSul", e);
         }
-    }
+		
+	}
+
+	@Override
+	public SulWrapper<TCPInput, TCPOutput, ExecutionContext<TCPInput, TCPOutput, String>> buildWrapper() {
+		return new SulWrapperStandard<>();
+	}
 }

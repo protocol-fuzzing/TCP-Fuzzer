@@ -73,8 +73,7 @@ public class MultiBuilder
             new StateFuzzerComposerStandard<>(
                 stateFuzzerEnabler,
                 alphabetBuilder,
-                sulBuilder,
-                sulWrapper
+                sulBuilder
             ).initialize()
         );
     }
@@ -84,8 +83,7 @@ public class MultiBuilder
         return new TestRunnerStandard<>(
             testRunnerEnabler,
             alphabetBuilder,
-            sulBuilder,
-            sulWrapper
+            sulBuilder
         ).initialize();
     }
 
@@ -94,8 +92,7 @@ public class MultiBuilder
         return new TimingProbeStandard<>(
             timingProbeEnabler,
             alphabetBuilder,
-            sulBuilder,
-            sulWrapper
+            sulBuilder
         ).initialize();
     }
 }
