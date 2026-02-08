@@ -1,25 +1,62 @@
 # TCP-Fuzzer 🌐📠
 TCP-Fuzzer is a tool for protocol-state-fuzzing TCP implementations. The tool is currently WIP and undergoing major restructuring.
 
-# Requirements
-The tool can be deployed in an isolated environment using Docker (containerized), or directly on the host system (local).
+## Requirements
+The tool can be deployed in an isolated environment using Docker (isolated), or directly on the host system (local).
 For an isolated deployment, you only need Docker.
-For a local deployment, the tool needs Python 3.12 (or later), Java JDK 17 (or later), and Maven for deployment.
+For a local deployment, the tool needs Python 3.12 (or later), Java JDK 21 (or later), and Maven for deployment.
 Currently, non-Java part of the tool has been tested only on Linux and on other OS-es, if the tool is deployed locally.
 
-# Development status
+## Development status
 Docker support is WIP, and not yet guaranteed to work.
-Socket commands are not yet supported in the _Mapper_.
+The _Mapper_ does not support learning clients or learning with socket commands.
+Hence, TCP-Fuzzer can only generate state machines for listening servers.
 
-
-# Installation (local)
-
-`cd` to the fuzzer directory. Next install the _Learner_:
+## Installation
+`cd` to the fuzzer directory.
+### Local
+Install the _Learner_ and the _Mapper_ environment by running:
 ```
-cd lea
+./install.sh
 ```
 
-# Components
+This should create two directories:
+- `learner\target`, which contains build artifacts for the Learner including `TCP-Learner.jar`;
+- `mapper\.venv`, which contains the Python virtual environment of the mapper.
+
+### Isolated environment
+This is not fully supported, but in principle one should run:
+```
+docker compose up
+```
+## Quick run
+In this example, we use TCP-Fuzzer to generate a state machine for the server implementation of the TCP stack running on the host machine.
+### Local
+We run separately the _Learner_, _Mapper_ and _TCP Entity_, each in its own terminal.
+
+For the _Mapper_, we first activate its Python environment, and then run it, supplying the default configuration file contained in `config`.
+```
+source mapper/.venv/bin/activate
+sudo mapper/.venv/bin/python mapper/main.py config/mapperconfig.toml
+```
+We note the addresses (IP and port) the _Mapper_ expects for the _TCP Entity_ (which is a server, configured `serverIP` and `serverPort`), and for the _Learner_ (`socketIP` and  `socketPort`).
+We need to match these addresses when running the _Learner_ and _TCP Entity_.
+Also, we use `sudo`  as the raw socket capability required by _Mapper_ requires elevated permissions.
+
+Then we launch the _TCP Entity_, which can be any TCP server application (clients are not yet supported). We will use the one included with TCP-Fuzzer. The port has to correspond with the value of `serverPort` the _Mapper_ was configured.
+```
+python3 sutadapter/serverAdapter.py --port 9000
+```
+
+Finally we launch the _Learner_ with default arguments, which include the alphabet `config/alphabet.xml`.
+```
+java -jar learner/target/TCP-Learner.jar config/learner_args
+```
+
+You should be able to see activity in both the _Mapper_ and _Learner_ terminals.
+Results of learning will be stored in a folder inside the `output` directory.
+
+## Components
 
 ##### Learner
 _Learner_ is Java tool based on [ProtocolState-Fuzzer][psf], which interacts with TCP entities (sending input symbols/receiving output symbols) to construct state machine models capturing their behavior.
@@ -41,19 +78,9 @@ _Mapper_ (previously known as Network Adapter) is a Python tool which performs a
 
 ##### TCP Adapter and Entity
 
-_TCP Entity_ is your TCP stack, which can be either a Server or a Client. _TCP Adapter_ envelops a _TCP Entity_, and is used to perform socket commands on it.
+_TCP Entity_ is your TCP stack, which at present can only be a server (client support WIP). _TCP Adapter_ envelops a _TCP Entity_, and is used to perform socket commands on it.
 
-# Walkthrough
-Running TCP-Fuzzer requires
-
-
-# Installation (docker)
-install docker and docker compose, edit the files in the config folder to your liking and run
-
-```
-docker-compose up
-```
-# Acknowledgements
+## Acknowledgements
 The tool was originally developed by Isaac Westerman as part of his Bachelor's thesis. The code is based on [tcp-learner](https://github.com/pfg666/tcp-learner), a TCP protocol-state fuzzer developed by Paul Fiterau and Ramon Janssen.
 
 [psf]:https://github.com/protocol-fuzzing/protocol-state-fuzzer/
