@@ -1,11 +1,9 @@
 state-fuzzer-server
 -connect
-mapper:18200
+localhost:18200
 -tcpMapperAddress
-mapper:18200
+localhost:18200
 -alphabet
-/config/alphabet.xml
--output
-/app/output_folder
+${fuzzer.dir}/config/alphabet.xml
 -memQueryRuns
 3

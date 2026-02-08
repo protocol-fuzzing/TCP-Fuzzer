@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Installs some necessary packages and then installs DTLS-Fuzzer.
+# Installs some necessary packages and then installs the TCP learner component.
 
-# SCRIPT_DIR should correspond to DTLS-Fuzzer's root directory
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-readonly SCRIPT_DIR
-readonly PATCHES_DIR="${SCRIPT_DIR}/experiments/patches"
+# SCRIPT_DIR should correspond to the learning component's root directory
+LEARNER_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+readonly LEARNER_SCRIPT_DIR
+readonly PATCHES_DIR="${LEARNER_SCRIPT_DIR}/experiments/patches"
 
 
 readonly PROTOCOLSTATEFUZZER_COMMIT="b737a5d"
@@ -19,9 +19,9 @@ function check_java() {
         if command -v apt-get &> /dev/null
         then
             echo "Installing java using apt-get"
-            sudo apt-get install openjdk-17-jdk
+            sudo apt-get install openjdk-21-jdk
         else
-            echo "Install JDK >= 17, add it to PATH and re-run"
+            echo "Install JDK >= 21, add it to PATH and re-run"
             exit
         fi
     else
@@ -29,8 +29,17 @@ function check_java() {
         if [[ ! ${java_vm} == "Server VM" ]]
         then
             echo "Required Java Server VM (a JDK instead of JRE), found ${java_vm}"
-            echo "Install JDK >= 17, add it to PATH and re-run"
+            echo "Install JDK >= 21, add it to PATH and re-run"
             exit
+        else
+            jvm_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
+            major=${jvm_version%%.*}
+            if (( major < 21 ))
+            then 
+                echo "Required Java version 21 or later, found ${major}"
+                echo "Install JDK >= 21, add it to PATH and re-run"
+                exit 1
+            fi
         fi
     fi
 }
@@ -84,6 +93,6 @@ check_mvn
 # Checkout and install ProtocolState-Fuzzer
 install_protocolstatefuzzer
 
-# Install DTLS-Fuzzer
-echo "Installing DTLS-Fuzzer..."
+# Install TCP-Learner
+echo "Installing TCP-Learner..."
 mvn clean install

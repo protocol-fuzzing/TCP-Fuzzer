@@ -102,7 +102,7 @@ class Sender:
         flags=tcpFlagsSet)
 
         # Either we have a payload or we don't
-        p = pIP / pTCP / Raw(load=payload) if payload else pIP / pTCP
+        p = pIP / pTCP #/ Raw(load=payload) if payload else pIP / pTCP
         return p
 
     def sendAndRecv(self, packet, waitTime = None):
@@ -195,8 +195,8 @@ class Sender:
             time.sleep(waitTime - timeSpent)
         if type(response) is not Timeout:
             global seqVar, ackVar
-            seqVar = response.seq;
-            ackVar = response.ack;
+            seqVar = response.seq
+            ackVar = response.ack
         return response
 
     # resets by way of a valid reset. Requires a valid sequence number. Avoids problems encountered with the maximum
