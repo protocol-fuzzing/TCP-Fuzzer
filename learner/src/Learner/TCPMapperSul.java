@@ -119,11 +119,6 @@ public class TCPMapperSul
 
     @Override
     public TCPOutput step(TCPInput in) {
-        // If we send an S or an F we technically send one bit of data
-        if(in.getName().contains("S") || in.getName().contains("F")) {
-            this.context.getState().setAck(this.context.getState().getAck() + 1);
-        }
-
         this.mapper.updateInput(in, this.context);
         String output;
         // Reset does not need seq and ack numbers
