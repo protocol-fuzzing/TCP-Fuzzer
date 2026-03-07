@@ -46,8 +46,9 @@ def parse_args(argv=None):
 
 def run_server(host: str, port: int, backlog: int = 5, reuse_addr: bool = True, reuse_port: bool = False):
     """
-    Run a sequential echo server. Handles exactly one client at a time.
-    After a client disconnects, the server accepts the next client.
+    Run a sequential echo server. Handles exactly ONE client then exits.
+    The process is restarted externally by runSocketAdapter.sh after each client,
+    ensuring a fully clean TCP state for every learning query.
     """
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as server_sock:
         # Make restarts easier during development
@@ -62,46 +63,44 @@ def run_server(host: str, port: int, backlog: int = 5, reuse_addr: bool = True, 
         server_sock.bind((host, port))
         server_sock.listen(backlog)
         # Set a timeout so Ctrl+C can interrupt even if waiting in accept()
-        server_sock.settimeout(1.0)
+        server_sock.settimeout(0.5)
 
         bound_host, bound_port = server_sock.getsockname()
         print(f"[*] Echo server (sequential) listening on {bound_host}:{bound_port}")
         print("[*] Press Ctrl+C to stop.")
 
-        while True:
-            try:
-                # Accept a single client (or time out to re-check for Ctrl+C)
-                try:
-                    conn, addr = server_sock.accept()
-                except socket.timeout:
-                    continue  # loop back and allow KeyboardInterrupt to be caught
+        # Accept exactly one client, serve it, then exit so the wrapper script
+        # (start_server.sh) can restart us with a fully clean OS TCP state.
 
-                with conn:
-                    print(f"[+] Connected: {addr}")
-                    # Optionally set a timeout to avoid hanging forever on stalled clients
-                    conn.settimeout(60.0)
-                    while True:
-                        data = conn.recv(4096)
-                        if not data:
-                            # Client closed the connection
-                            break
-                        conn.sendall(data)  # Echo back
+        conn = None
+        while conn is None:
+            # Loop only while waiting for a client 
+            try:
+                conn, addr = server_sock.accept()
+            except socket.timeout:
+                continue  # no client yet, loop back so Ctrl+C can be caught
             except KeyboardInterrupt:
                 print("\n[!] Interrupt received, stopping...")
-                break
-            except ConnectionResetError:
-                # Client closed forcefully—move on to the next client
-                print("[!] Connection reset by peer.")
-                continue
-            except socket.timeout:
-                # Per-connection timeout (if set) — drop client and continue
-                print("[!] Connection timed out.")
-                continue
-            except OSError as e:
-                print(f"[!] Socket error: {e}")
-                continue
+                return
 
-        print("[*] Server stopped.")
+        try:
+            with conn:
+                print(f"[+] Connected: {addr}")
+                conn.settimeout(60.0)
+                while True:
+                    data = conn.recv(4096)
+                    if not data:
+                        # Client closed the connection — exit process
+                        break
+                    conn.sendall(data)  # Echo back
+        except ConnectionResetError:
+            print("[!] Connection reset by peer.")
+        except socket.timeout:
+            print("[!] Connection timed out.")
+        except OSError as e:
+            print(f"[!] Socket error: {e}")
+
+        print("[*] Client done, exiting for clean restart.")
 
 def main(argv=None):
     args = parse_args(argv)
