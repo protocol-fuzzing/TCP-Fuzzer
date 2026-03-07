@@ -141,7 +141,7 @@ public class TCPMapperSul
                 // If reset is recevied we reset sequence and acknowledgement numbers                
                 startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
                 context.getState().setSeq(startSeq);
-                context.getState().setAck(startSeq + 1);
+                context.getState().setAck(0);
             } else if (split[2].contains("A")) {
                 // Update seq and ack if ack number is valid
                 context.getState().setSeq(Long.parseLong(split[1]));

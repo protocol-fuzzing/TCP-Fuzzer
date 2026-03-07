@@ -202,10 +202,10 @@ class Sender:
     # resets by way of a valid reset. Requires a valid sequence number. Avoids problems encountered with the maximum
     # number of connections allowed on a port.
     def sendValidReset(self,seq):
-        if self.resetMechanism == 0 or self.resetMechanism == 2:
-            self.sendInput("R", seq, 0, '')
-        if self.resetMechanism == 1 or self.resetMechanism == 2:
-            self.sendReset()
+        # Always send RST to tear down the connection on the server side
+        self.sendInput("R", seq, 0, '')
+        # Always refresh the port as well
+        self.sendReset()
 
     # resets the connection by changing the port number. Be careful, on some OSes (Win 8) upon hitting a certain number of
     # connections opened on a port, packets are sent to close down connections, which affects learning. TCP configurations

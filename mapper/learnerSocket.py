@@ -6,6 +6,7 @@ import time
 import sys
 import signal
 from response import Timeout
+import sender as sender_module
 
 
 class LearnerSocket:
@@ -146,9 +147,9 @@ class LearnerSocket:
             match(input):
                 case "reset":
                     print("Received reset signal.")
-                    self.sender.sendReset()
-                    self.sendOutput("resetok")
+                    self.sender.sendValidReset(sender_module.ackVar)
                     print("-" * 60)
+                    self.sendOutput("resetok")
                 case "exit":
                     msg = "Received exit signal " +  "(continuous" +  "=" + str(self.continuous) + ") :"
                     if self.continuous == False:
@@ -193,6 +194,7 @@ class LearnerSocket:
             self.fault("invalid input " + input)
 
         if type(response) is not Timeout:
+            respFlags = str(response['TCP'].flags)
             print('<- received ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack) + "\n")
             self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + str(response['TCP'].flags))
         else:
