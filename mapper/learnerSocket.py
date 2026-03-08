@@ -130,6 +130,8 @@ class LearnerSocket:
         response back to the learner
         """
         self.sender = sender
+        self.serverExpectsAck = False  # True when server's last response had S or F (will retransmit if not ACK'd)
+
 
         while (True):
             # TODO Why is this called input1 and not just input?
@@ -148,6 +150,7 @@ class LearnerSocket:
                 case "reset":
                     print("Received reset signal.")
                     self.sender.sendValidReset(sender_module.ackVar)
+                    self.serverExpectsAck = False
                     print("-" * 60)
                     self.sendOutput("resetok")
                 case "exit":
@@ -182,22 +185,44 @@ class LearnerSocket:
             print(("send action: " +input))
             input = input.lower().replace("\n","")
             try:
-                response = sender.sendAction(input) # response might arrive before sender is ready
+                response = self.sender.sendAction(input) # response might arrive before sender is ready
             except Exception as e:
                 print(str(e))
                 response = "BROKENPIPE"
         elif input == "nil":
             # TODO in what case is this used?
             print("send nothing (nil)")
-            response = sender.captureResponse()
+            response = self.sender.captureResponse()
         else:
             self.fault("invalid input " + input)
 
         if type(response) is not Timeout:
             respFlags = str(response['TCP'].flags)
+            if 'S' in respFlags or 'F' in respFlags:
+                self.serverExpectsAck = True
+            else:
+                self.serverExpectsAck = False
             print('<- received ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack) + "\n")
             self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + str(response['TCP'].flags))
         else:
+            isPureAck = ('A' in input and 'S' not in input 
+                         and 'F' not in input and 'R' not in input)
+            isReset = 'R' in input
+
+            if isPureAck :
+                # Pure ACK timeout is expected (e.g., completing handshake).
+                # The server silently accepts it, no retransmission expected.
+                self.serverExpectsAck = False
+            elif isReset:
+                self.serverExpectsAck = False
+            elif self.serverExpectsAck:
+                # Server's last response had S or F,it will retransmit if
+                # not ACK'd. Since we got an unexpected timeout, send cleanup
+                # RST to prevent retransmissions from causing non-determinism.
+                print("-> cleanup RST for lingering connection")
+                self.sender.sendCleanupRst(sender_module.ackVar)
+                self.serverExpectsAck = False
+
             print("<- received timeout")
             self.sendOutput("timeout")
 

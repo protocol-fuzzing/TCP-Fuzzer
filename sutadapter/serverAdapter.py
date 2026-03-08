@@ -34,8 +34,8 @@ def parse_args(argv=None):
     parser.add_argument(
         "--backlog",
         type=int,
-        default=5,
-        help="Listen backlog (default: 5).",
+        default=1,
+        help="Listen backlog (default: 1).",
     )
     parser.add_argument(
         "--reuse-port",
@@ -44,7 +44,7 @@ def parse_args(argv=None):
     )
     return parser.parse_args(argv)
 
-def run_server(host: str, port: int, backlog: int = 5, reuse_addr: bool = True, reuse_port: bool = False):
+def run_server(host: str, port: int, backlog: int = 1, reuse_addr: bool = True, reuse_port: bool = False):
     """
     Run a sequential echo server. Handles exactly ONE client then exits.
     The process is restarted externally by runSocketAdapter.sh after each client,

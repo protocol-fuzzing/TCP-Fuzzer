@@ -3,6 +3,7 @@ from response import Timeout, ConcreteResponse
 import re
 import time
 import random
+from scapy.all import send as scapy_send
 
 # variables used to retain last sequence/acknowledgment sent
 seqVar = 0
@@ -206,6 +207,12 @@ class Sender:
         self.sendInput("R", seq, 0, '')
         # Always refresh the port as well
         self.sendReset()
+
+    def sendCleanupRst(self, seqNr):
+        """Send RST to actively tear down a half-open connection on the server.
+        This prevents timing-dependent states caused by SYN_RECEIVED retransmission timeouts."""
+        packet = self.createPacket("R", seqNr, 0, '')
+        scapy_send(packet, iface=self.networkInterface, verbose=0)
 
     # resets the connection by changing the port number. Be careful, on some OSes (Win 8) upon hitting a certain number of
     # connections opened on a port, packets are sent to close down connections, which affects learning. TCP configurations
