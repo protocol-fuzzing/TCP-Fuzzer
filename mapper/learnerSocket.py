@@ -141,7 +141,7 @@ class LearnerSocket:
                 self.closeLearnerSocket()
                 self.accept()
                 continue
-            print("received input " + input)
+            # print("received input " + input)
             seqNr = 0
             ackNr = 0
 
@@ -174,12 +174,15 @@ class LearnerSocket:
     def parseInput(self, input):
         """Parses the input string and takes the corresponding action"""
 
-        if self.sender.isFlags(input):
+        tcpFlags = input.split("+")[0] if "+" in input else input
+        payloadLen = 0
+        if self.sender.isFlags(tcpFlags):
             seqNr = self.receiveNumber()
             ackNr = self.receiveNumber()
             payload = self.receiveInput()[1:-1]
-            print(("-> send packet: " + input + " " + str(seqNr) + " " + str(ackNr)))
-            response = self.sender.sendInput(input, seqNr, ackNr, payload);
+            payloadLen = 1 if 'P' in tcpFlags else 0
+            print(("\n" + "-> send packet: " + input + " " + str(seqNr) + " " + str(ackNr)))
+            response = self.sender.sendInput(tcpFlags, seqNr, ackNr, payload);
         elif "sendAction" in dir(self.sender) and self.sender.isAction(input):
             # TODO this functionality seems to pertain to sending actions to the SUTAdapter, but that's been split off to a different file.
             print(("send action: " +input))
@@ -202,12 +205,18 @@ class LearnerSocket:
                 self.serverExpectsAck = True
             else:
                 self.serverExpectsAck = False
-            print('<- received ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack) + "\n")
+            print('<- received: ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack))
             self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + str(response['TCP'].flags))
+            if payloadLen > 0 and 'R' not in respFlags:
+                expectedAck = seqNr + payloadLen
+                if response.ack >= expectedAck:
+                    print("*** server received payload ***"+"\n")
+                else:
+                    print("*** server did NOT receive payload ***"+"\n")
         else:
-            isPureAck = ('A' in input and 'S' not in input 
-                         and 'F' not in input and 'R' not in input)
-            isReset = 'R' in input
+            isPureAck = ('A' in tcpFlags and 'S' not in tcpFlags 
+                         and 'F' not in tcpFlags and 'R' not in tcpFlags)
+            isReset = 'R' in tcpFlags
 
             if isPureAck :
                 # Pure ACK timeout is expected (e.g., completing handshake).

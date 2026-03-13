@@ -120,43 +120,68 @@ public class TCPMapperSul
     @Override
     public TCPOutput step(TCPInput in) {
         this.mapper.updateInput(in, this.context);
-        String output;
-        // Reset does not need seq and ack numbers
-        if (in.getName() == "reset") {
-            output = socketSul.sendAndRecv(in.getName());
-        } else {
-            socketSul.send(in.getName());
-            socketSul.send(String.valueOf(in.getSeq()));
-            socketSul.send(String.valueOf(in.getAck()));
-            output = socketSul.sendAndRecv("");
+
+        final String name = in.getName();
+        final boolean outHasS = name.contains("S");
+        final boolean outHasF = name.contains("F");
+        final boolean outHasP = name.contains("P");  //P means 1 byte of payload
+
+        // reset input does not need seq and ack numbers
+        if ("reset".equals(name)) {
+            socketSul.sendAndRecv(name);
+            // Reset local tracking
+            startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
+            context.getState().setSeq(startSeq);
+            context.getState().setAck(0);
+            return new TCPOutput("reset");
         }
 
-        if (output.equals("timeout")) {
+        final long seqBefore = in.getSeq();
+        final long ackBefore = in.getAck();
+        socketSul.send(name);
+        socketSul.send(String.valueOf(seqBefore));
+        socketSul.send(String.valueOf(ackBefore));
+        final String output = socketSul.sendAndRecv("");
+        // How much SEQ space this outgoing segment would consume
+        // S and F each consume 1, P also consume 1 
+        final long outConsume = (outHasS ? 1 : 0) + (outHasF ? 1 : 0) + (outHasP ? 1 : 0);
+        final long nextSeqCandidate = seqBefore + outConsume;
+
+        //timeout: peer did not respond window so do not advance local seq/ack
+        if ("timeout".equals(output)) {
             return new TCPOutput("timeout");
-        } else {
-            // Split the returned packet (it has format "seq,ack,flags")
-            String[] split = output.split(",");
-
-            if (split[2].contains("R")) {
-                // If reset is recevied we reset sequence and acknowledgement numbers                
-                startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
-                context.getState().setSeq(startSeq);
-                context.getState().setAck(0);
-            } else if (split[2].contains("A")) {
-                // Update seq and ack if ack number is valid
-                context.getState().setSeq(Long.parseLong(split[1]));
-                context.getState().setAck(Long.parseLong(split[0]) + 1);
-            } else {
-                // otherwise we just update our ACK (since input ack is not valid)
-                context.getState().setAck(Long.parseLong(split[0]) + 1);
-            }
-
-            return new TCPOutput(
-                split[2],
-                Long.parseLong(split[0]),
-                Long.parseLong(split[1])
-            );
         }
+
+        // Returned packet format: "seq,ack,flags"
+        String[] split = output.split(",");
+        final long peerSeq = Long.parseLong(split[0]);
+        final long peerAck = Long.parseLong(split[1]);
+        final String peerFlags = split[2];
+
+        // RST received, reset local tracking
+        if (peerFlags.contains("R")) {
+        startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
+        context.getState().setSeq(startSeq);
+        context.getState().setAck(0);
+        return new TCPOutput(peerFlags, peerSeq, peerAck);
+        }  
+
+        // Update local ACK (= next expected from server)
+        long newLocalAck = peerSeq;
+        if (peerFlags.contains("S")) newLocalAck += 1;
+        if (peerFlags.contains("F")) newLocalAck += 1;
+        context.getState().setAck(newLocalAck);
+
+        // Update local SEQ without drift
+        // Advance the SEQ only if the server ACKs it.
+        // If server sends a corrective ACK (peerAck < nextSeqCandidate), resync to peerAck.
+        if (peerAck >= nextSeqCandidate) {
+            context.getState().setSeq(nextSeqCandidate);
+        } else {
+            context.getState().setSeq(peerAck);
+        }
+
+        return new TCPOutput(peerFlags, peerSeq, peerAck);
     }
 
     @Override

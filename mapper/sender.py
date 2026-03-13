@@ -1,4 +1,4 @@
-from scapy.all import sr1, IP, TCP
+from scapy.all import sr1, IP, TCP, Raw
 from response import Timeout, ConcreteResponse
 import re
 import time
@@ -103,7 +103,7 @@ class Sender:
         flags=tcpFlagsSet)
 
         # Either we have a payload or we don't
-        p = pIP / pTCP #/ Raw(load=payload) if payload else pIP / pTCP
+        p = pIP / pTCP / Raw(load=payload) if payload else pIP / pTCP
         return p
 
     def sendAndRecv(self, packet, waitTime = None):
@@ -182,6 +182,10 @@ class Sender:
             waitTime = self.waitTime
 
         timeBefore = time.time()
+
+        # If PSH flag is set, attach 1 byte of payload
+        if flags != "nil" and 'P' in flags:
+            payload = b'\x00'
 
         if flags != "nil":
             packet = self.createPacket(flags, seqNr, ackNr, payload)
