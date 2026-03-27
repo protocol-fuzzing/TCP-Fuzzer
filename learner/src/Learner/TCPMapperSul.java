@@ -170,6 +170,7 @@ public class TCPMapperSul
         long newLocalAck = peerSeq;
         if (peerFlags.contains("S")) newLocalAck += 1;
         if (peerFlags.contains("F")) newLocalAck += 1;
+        if (peerFlags.contains("P")) newLocalAck += 1;
         context.getState().setAck(newLocalAck);
 
         // Update local SEQ without drift

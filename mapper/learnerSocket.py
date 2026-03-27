@@ -1,5 +1,5 @@
 from time import sleep
-__author__ = 'paul,ramon,isaac'
+__author__ = 'paul,ramon,isaac,behnaz'
 import socket
 from select import select
 import time
@@ -7,6 +7,7 @@ import sys
 import signal
 from response import Timeout
 import sender as sender_module
+from scapy.all import Raw
 
 
 class LearnerSocket:
@@ -181,8 +182,8 @@ class LearnerSocket:
             ackNr = self.receiveNumber()
             payload = self.receiveInput()[1:-1]
             payloadLen = 1 if 'P' in tcpFlags else 0
-            print(("\n" + "-> send packet: " + input + " " + str(seqNr) + " " + str(ackNr)))
-            response = self.sender.sendInput(tcpFlags, seqNr, ackNr, payload);
+            print(("\n" + "-> send: " + input + " " + str(seqNr) + " " + str(ackNr)))
+            response = self.sender.sendInput(tcpFlags, seqNr, ackNr, payload)
         elif "sendAction" in dir(self.sender) and self.sender.isAction(input):
             # TODO this functionality seems to pertain to sending actions to the SUTAdapter, but that's been split off to a different file.
             print(("send action: " +input))
@@ -201,18 +202,24 @@ class LearnerSocket:
 
         if type(response) is not Timeout:
             respFlags = str(response['TCP'].flags)
+            echoedPayload = bytes(response[Raw].load) if Raw in response else b''
+            payloadText = echoedPayload.decode("utf-8", errors="replace") if echoedPayload else ""
+            payloadInfo = ""
+            if echoedPayload:
+                payloadInfo = " payload=" + payloadText
+
             if 'S' in respFlags or 'F' in respFlags:
                 self.serverExpectsAck = True
             else:
                 self.serverExpectsAck = False
-            print('<- received: ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack))
-            self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + str(response['TCP'].flags))
+            print('<- receive: ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack) + payloadInfo)
+            self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + respFlags)
             if payloadLen > 0 and 'R' not in respFlags:
-                expectedAck = seqNr + payloadLen
-                if response.ack >= expectedAck:
-                    print("*** server received payload ***"+"\n")
+                if echoedPayload == b'x':
+                    print("*** server echoed payload: " + payloadText + " ***")
                 else:
-                    print("*** server did NOT receive payload ***"+"\n")
+                    print("*** server did NOT echo payload x ")
+
         else:
             isPureAck = ('A' in tcpFlags and 'S' not in tcpFlags 
                          and 'F' not in tcpFlags and 'R' not in tcpFlags)

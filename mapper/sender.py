@@ -1,4 +1,4 @@
-from scapy.all import sr1, IP, TCP, Raw
+from scapy.all import sr, sr1, IP, TCP, Raw
 from response import Timeout, ConcreteResponse
 import re
 import time
@@ -106,7 +106,7 @@ class Sender:
         p = pIP / pTCP / Raw(load=payload) if payload else pIP / pTCP
         return p
 
-    def sendAndRecv(self, packet, waitTime = None):
+    def sendAndRecv(self, packet, waitTime = None, expectedEchoPayload = None):
         """Sends a packet and retrieves a response"""
 
         if waitTime is None:
@@ -114,10 +114,36 @@ class Sender:
 
         if packet is not None:
             self.clientIP = packet[IP].src
+            if expectedEchoPayload is not None:
+                responses, _ = sr(packet, timeout=waitTime, iface=self.networkInterface, verbose=self.isVerbose, multi=True)
+                if len(responses) == 0:
+                    return Timeout()
+                flowResponses = [candidate for _, candidate in responses if self.isMatchingFlow(packet, candidate)]
+                if len(flowResponses) == 0:
+                    return Timeout()
+                for candidate in flowResponses:
+                    if Raw in candidate and bytes(candidate[Raw].load) == expectedEchoPayload:
+                        return candidate
+                for resp in flowResponses:
+                    if self.hasResetFlag(resp):
+                        return resp
+                return Timeout()
             # consider adding the parameter: iface="ethx" if you don't receive a response. Also consider increasing the wait time
             response = sr1(packet, timeout=waitTime, iface=self.networkInterface, verbose=self.isVerbose)
 
             return response if response is not None else Timeout()
+        
+    def isMatchingFlow(self, requestPacket, responsePacket):
+        if responsePacket is None or TCP not in responsePacket:
+            return False
+        if responsePacket[TCP].sport != requestPacket[TCP].dport:
+            return False
+        if responsePacket[TCP].dport != requestPacket[TCP].sport:
+            return False
+        return True
+
+    def hasResetFlag(self, packet):
+        return TCP in packet and (int(packet[TCP].flags) & 0x04) != 0
 
     # FIXME possibly refactor response.py a bit, the names are confusing
     def scapyResponseParse(self, scapyResponse):
@@ -182,16 +208,17 @@ class Sender:
             waitTime = self.waitTime
 
         timeBefore = time.time()
+        expectedEchoPayload = None
 
         # If PSH flag is set, attach 1 byte of payload
         if flags != "nil" and 'P' in flags:
-            payload = b'\x00'
-
+            payload = b'x'
+            expectedEchoPayload = b'x'
         if flags != "nil":
             packet = self.createPacket(flags, seqNr, ackNr, payload)
         else:
             packet = None
-        response = self.sendAndRecv(packet, waitTime)
+        response = self.sendAndRecv(packet, waitTime, expectedEchoPayload)
 
         # wait a certain amount of time after sending the packet
         timeAfter = time.time()
