@@ -1,5 +1,6 @@
 from scapy.all import sr, sr1, IP, TCP, Raw
 from response import Timeout, ConcreteResponse
+from tracker import Tracker
 import re
 import time
 import random
@@ -36,10 +37,18 @@ class Sender:
         #set verbosity (0/1)
         self.isVerbose = isVerbose
 
+        # background retransmission-aware packet tracker
+        self.tracker = Tracker(networkInterface, serverIP)
+        self.tracker.start()
+
 
     def __str__(self):
-        return "Sender with parameters: " + str(self.__dict__)
-
+        params = {}
+        for k, v in self.__dict__.items():
+            if k != 'tracker':
+                params[k] = v
+        return "Sender with parameters: " + str(params)
+    
     # TODO the functions pertaining to refreshing ports seem a bit odd, they read from a file. Couldn't they just increment the number instead?
     # TODO I have changed this to select a port randomly, that could backfire if im unlucky enough to select a port which was very recently
     # used, causing nondeterminism. I haven't run into problems yet though.
@@ -121,13 +130,12 @@ class Sender:
                 flowResponses = [candidate for _, candidate in responses if self.isMatchingFlow(packet, candidate)]
                 if len(flowResponses) == 0:
                     return Timeout()
-                for candidate in flowResponses:
-                    if Raw in candidate and bytes(candidate[Raw].load) == expectedEchoPayload:
-                        return candidate
-                for resp in flowResponses:
-                    if self.hasResetFlag(resp):
-                        return resp
-                return Timeout()
+                # use the last packet's seq/ack, merge all flags
+                mergedFlags = flowResponses[-1]
+                for pkt in flowResponses[:-1]:
+                    mergedFlags[TCP].flags = mergedFlags[TCP].flags | pkt[TCP].flags
+                return mergedFlags
+
             # consider adding the parameter: iface="ethx" if you don't receive a response. Also consider increasing the wait time
             response = sr1(packet, timeout=waitTime, iface=self.networkInterface, verbose=self.isVerbose)
 
