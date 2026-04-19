@@ -208,7 +208,7 @@ class LearnerSocket:
             if echoedPayload:
                 payloadInfo = " payload=" + payloadText
 
-            if 'S' in respFlags or 'F' in respFlags:
+            if 'S' in respFlags or 'F' in respFlags or 'P' in respFlags:
                 self.serverExpectsAck = True
             else:
                 self.serverExpectsAck = False

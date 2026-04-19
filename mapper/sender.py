@@ -111,7 +111,6 @@ class Sender:
         ack=ackNr,
         flags=tcpFlagsSet)
 
-        # Either we have a payload or we don't
         p = pIP / pTCP / Raw(load=payload) if payload else pIP / pTCP
         return p
 
@@ -123,23 +122,53 @@ class Sender:
 
         if packet is not None:
             self.clientIP = packet[IP].src
+            server_sport = packet[TCP].dport
+            our_sport    = packet[TCP].sport
+
+            # clear any stale last-packet for this flow before sending so we
+            # don't accidentally return a response from a previous exchange.
+            self.tracker.forget_flow(server_sport, our_sport)
+            scapy_send(packet, iface=self.networkInterface, verbose=self.isVerbose)
+
+            # Wait for the tracker to deliver the first non-retransmit response.
+            first = self.tracker.wait_for_packet(server_sport, our_sport, waitTime)
+            if first is None or not self.isMatchingFlow(packet, first):
+                return Timeout()
+
+            # PSH case: the server may send a pure ACK first, then a separate
+            # PA with the echo payload. Keep polling until we
+            # see the echo, a RST, or the timeout expires
             if expectedEchoPayload is not None:
-                responses, _ = sr(packet, timeout=waitTime, iface=self.networkInterface, verbose=self.isVerbose, multi=True)
-                if len(responses) == 0:
-                    return Timeout()
-                flowResponses = [candidate for _, candidate in responses if self.isMatchingFlow(packet, candidate)]
-                if len(flowResponses) == 0:
-                    return Timeout()
-                # use the last packet's seq/ack, merge all flags
-                mergedFlags = flowResponses[-1]
-                for pkt in flowResponses[:-1]:
-                    mergedFlags[TCP].flags = mergedFlags[TCP].flags | pkt[TCP].flags
-                return mergedFlags
+                deadline = time.time() + waitTime
+                while True:
+                    lastPkt = self.tracker.get_latest_packet(server_sport, our_sport)
+                    if lastPkt is not None:
+                        if Raw in lastPkt and bytes(lastPkt[Raw].load) == expectedEchoPayload:
+                            return lastPkt
+                        if self.hasResetFlag(lastPkt):
+                            return lastPkt
+                        # Clear the slot so the tracker stores the next arrival.
+                        self.tracker.forget_flow(server_sport, our_sport)
+                    if time.time() >= deadline:
+                        return Timeout()
+                    time.sleep(0.01)
 
-            # consider adding the parameter: iface="ethx" if you don't receive a response. Also consider increasing the wait time
-            response = sr1(packet, timeout=waitTime, iface=self.networkInterface, verbose=self.isVerbose)
+            # split ACK + FIN-ACK: if the server first sends a pure
+            # ACK and then a separate FIN-ACK, the tracker will update
+            # latest packets to the FA
+            firstFlags = int(first[TCP].flags)
+            ACK = 0x10
+            FIN_OR_SYN = 0x03
+            RST = 0x04
+            isPureAck = (firstFlags & ACK) and not (firstFlags & FIN_OR_SYN) and not (firstFlags & RST)
+            if isPureAck:
+                self.tracker.forget_flow(server_sport, our_sport)
+                followUp = self.tracker.wait_for_packet(server_sport, our_sport, self.waitTime)
+                if followUp is not None and self.isMatchingFlow(packet, followUp):
+                    first[TCP].flags = first[TCP].flags | followUp[TCP].flags
 
-            return response if response is not None else Timeout()
+            return first
+
         
     def isMatchingFlow(self, requestPacket, responsePacket):
         if responsePacket is None or TCP not in responsePacket:
@@ -246,6 +275,9 @@ class Sender:
         self.sendInput("R", seq, 0, '')
         # Always refresh the port as well
         self.sendReset()
+        # Clear tracker history: packets from the old connection must not be
+        # treated as retransmits of packets in the next test.
+        self.tracker.reset()
 
     def sendCleanupRst(self, seqNr):
         """Send RST to actively tear down a half-open connection on the server.
@@ -261,7 +293,7 @@ class Sender:
 
 
     def shutdown(self):
-        pass
+        self.tracker.stop()
 
 # example on how to run the sender
 if __name__ == "__main__":
