@@ -79,7 +79,7 @@ class Tracker:
             flow = (src_port, dst_port)
             history = self.seen_packets.get(flow, set())
 
-        retransmittable_flags = {"SA", "FA", "S", "PA", "AP", "P", "F"}
+        retransmittable_flags = {"SA", "FA", "FPA", "S", "PA", "AP", "P", "F", "A"}
         flags_no_urgency = flags.replace("U", "")  # Ignore URG flag
 
         # CHECK 1: Have we seen this exact (seq, ack, flags) before?
