@@ -73,10 +73,10 @@ class Sender:
                 networkPort = self.senderPortMinimum
             else:
                 networkPort = self.senderPortMinimum + (int(line) + 1) % senderPortRange
-        f.closed
+        f.close()
         f = open(self.portNumberFile, "w")
         f.write(str(networkPort))
-        f.closed
+        f.close()
         return networkPort
 
     def sendPacket(self,flagsSet, seqNr, ackNr):
@@ -86,7 +86,7 @@ class Sender:
         return response
 
     def setServerPort(self, newPort):
-        self.serverPort = newPort;
+        self.serverPort = newPort
 
     def setSenderPort(self, newPort):
         self.senderPort = newPort
@@ -277,7 +277,7 @@ class Sender:
         self.sendReset()
         # Clear tracker history: packets from the old connection must not be
         # treated as retransmits of packets in the next test.
-        self.tracker.reset()
+        self.tracker.forget_all()
 
     def sendCleanupRst(self, seqNr):
         """Send RST to actively tear down a half-open connection on the server.
