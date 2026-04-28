@@ -5,9 +5,9 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSul;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulAdapter;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SulConfig;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSUL;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULAdapter;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULConfig;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.sulwrappers.DynamicPortProvider;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.sulwrappers.ProcessHandler;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.Mapper;
@@ -16,7 +16,7 @@ import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
 
 public class TCPMapperSul
     implements
-        AbstractSul<
+        AbstractSUL<
             TCPInput,
             TCPOutput,
             ExecutionContext<TCPInput, TCPOutput, String>
@@ -25,7 +25,7 @@ public class TCPMapperSul
     private SocketMapperSul socketSul;
 
     /** Stores the constructor parameter. */
-    protected SulConfig sulConfig;
+    protected SULConfig sulConfig;
 
     /** Stores the constructor parameter. */
     protected CleanupTasks cleanupTasks;
@@ -43,9 +43,9 @@ public class TCPMapperSul
     protected TCPMapper mapper;
 
     /** Stores the SulAdapter instance. */
-    protected SulAdapter sulAdapter;
+    protected SULAdapter sulAdapter;
 
-    public <T extends SulConfig & TCPMapperConfigProvider> TCPMapperSul(
+    public <T extends SULConfig & TCPMapperConfigProvider> TCPMapperSul(
         T sulConfig,
         CleanupTasks cleanupTasks
     ) throws UnknownHostException, IOException {
@@ -186,7 +186,7 @@ public class TCPMapperSul
     }
 
     @Override
-    public SulConfig getSulConfig() {
+    public SULConfig getSULConfig() {
         return sulConfig;
     }
 
@@ -217,7 +217,7 @@ public class TCPMapperSul
     }
 
     @Override
-    public SulAdapter getSulAdapter() {
+    public SULAdapter getSULAdapter() {
         return sulAdapter;
     }
 }

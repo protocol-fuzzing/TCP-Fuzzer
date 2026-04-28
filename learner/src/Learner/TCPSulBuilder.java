@@ -1,27 +1,28 @@
 package Learner;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSul;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulBuilder;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulWrapper;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulWrapperStandard;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SulConfig;
+import java.io.IOException;
+
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSUL;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULBuilder;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapper;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapperStandard;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULConfig;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
-import java.io.IOException;
 
 public class TCPSulBuilder
     implements
-        SulBuilder<
+        SULBuilder<
             TCPInput,
             TCPOutput,
             ExecutionContext<TCPInput, TCPOutput, String>
         > {
 
 	@Override
-	public AbstractSul<TCPInput, TCPOutput, ExecutionContext<TCPInput, TCPOutput, String>> buildSul(SulConfig sulConfig,
+	public AbstractSUL<TCPInput, TCPOutput, ExecutionContext<TCPInput, TCPOutput, String>> buildSUL(SULConfig sulConfig,
 			CleanupTasks cleanupTasks) {
 		try {
-            AbstractSul<
+            AbstractSUL<
                 TCPInput,
                 TCPOutput,
                 ExecutionContext<TCPInput, TCPOutput, String>
@@ -46,7 +47,14 @@ public class TCPSulBuilder
 	}
 
 	@Override
-	public SulWrapper<TCPInput, TCPOutput, ExecutionContext<TCPInput, TCPOutput, String>> buildWrapper() {
-		return new SulWrapperStandard<>();
+	public SULWrapper<TCPInput, TCPOutput, ExecutionContext<TCPInput, TCPOutput, String>> buildWrapper() {
+		return new SULWrapperStandard<>();
 	}
+
+//	@Override
+//	public AbstractSUL<TCPInput, TCPOutput, ExecutionContext<TCPInput, TCPOutput, String>> build(SULConfig sulConfig,
+//			CleanupTasks cleanupTasks) {
+//		// TODO Auto-generated method stub
+//		return null;
+//	}
 }

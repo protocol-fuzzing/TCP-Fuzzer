@@ -8,7 +8,7 @@ readonly LEARNER_SCRIPT_DIR
 readonly PATCHES_DIR="${LEARNER_SCRIPT_DIR}/experiments/patches"
 
 
-readonly PROTOCOLSTATEFUZZER_COMMIT="b737a5d"
+readonly PROTOCOLSTATEFUZZER_COMMIT="e8cddcc"
 readonly PROTOCOLSTATEFUZZER_REP_URL="https://github.com/protocol-fuzzing/protocol-state-fuzzer.git"
 readonly PROTOCOLSTATEFUZZER_FOLDER="ProtocolState-Fuzzer"
 
@@ -81,7 +81,7 @@ function install_protocolstatefuzzer() {
         (
             cd "${PROTOCOLSTATEFUZZER_FOLDER}" || exit
             echo "Installing ProtocolState-Fuzzer"
-            ./install.sh
+            mvn install
         )
     fi
 }

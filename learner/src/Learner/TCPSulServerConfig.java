@@ -1,10 +1,10 @@
 package Learner;
 
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULServerConfigStandard;
 import com.beust.jcommander.ParametersDelegate;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SulServerConfigStandard;
 
 public class TCPSulServerConfig
-    extends SulServerConfigStandard
+    extends SULServerConfigStandard
     implements TCPMapperConfigProvider {
 
     @ParametersDelegate
