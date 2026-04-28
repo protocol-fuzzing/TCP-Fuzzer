@@ -55,8 +55,8 @@ class Sender:
     def refreshNetworkPort(self):
         """Chooses a new port to send packets to"""
         print("previous local port: " + str(self.senderPort))
-        #self.setSenderPort(self.getNextPort())
-        self.setSenderPort(random.randint(self.senderPortMinimum, self.senderPortMaximum))
+        self.setSenderPort(self.getNextPort())
+        # self.setSenderPort(random.randint(self.senderPortMinimum, self.senderPortMaximum))
         print("next local port: " + str(self.senderPort)+"\n")
         return self.senderPort
 
