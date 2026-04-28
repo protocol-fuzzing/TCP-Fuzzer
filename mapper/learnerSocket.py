@@ -177,6 +177,17 @@ class LearnerSocket:
 
         tcpFlags = input.split("+")[0] if "+" in input else input
         payloadLen = 0
+
+        # if the server expects an ACK for its previous S/F response
+        # and we are about to send a pure SYN, send a cleanup RST first.
+        if self.serverExpectsAck:
+            isSyn = ('S' in tcpFlags and 'A' not in tcpFlags)
+            if isSyn:
+                print("-> pre-send cleanup RST (server expects ACK from previous step)")
+                self.sender.sendCleanupRst(sender_module.ackVar)
+                self.serverExpectsAck = False
+                time.sleep(self.sender.waitTime)  # let server process RST before next packet
+
         if self.sender.isFlags(tcpFlags):
             seqNr = self.receiveNumber()
             ackNr = self.receiveNumber()
