@@ -14,7 +14,7 @@ import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.Mapp
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
 
-public class TCPMapperSul
+public class TCPMapperSUL
     implements
         AbstractSUL<
             TCPInput,
@@ -22,7 +22,7 @@ public class TCPMapperSul
             ExecutionContext<TCPInput, TCPOutput, String>
         > {
 
-    private SocketMapperSul socketSul;
+    private SocketMapperSUL socketSul;
 
     /** Stores the constructor parameter. */
     protected SULConfig sulConfig;
@@ -45,7 +45,7 @@ public class TCPMapperSul
     /** Stores the SulAdapter instance. */
     protected SULAdapter sulAdapter;
 
-    public <T extends SULConfig & TCPMapperConfigProvider> TCPMapperSul(
+    public <T extends SULConfig & TCPMapperConfigProvider> TCPMapperSUL(
         T sulConfig,
         CleanupTasks cleanupTasks
     ) throws UnknownHostException, IOException {
@@ -55,7 +55,7 @@ public class TCPMapperSul
         this.cleanupTasks = cleanupTasks;
         // mapper and sulAdapter will be provided in subclasses
         this.mapper = new TCPMapper();
-        this.sulAdapter = new TCPSulAdapter();
+        this.sulAdapter = new TCPSULAdapter();
         // -------------------------------------------------------------------
 
         String mapperAddress = sulConfig
@@ -93,7 +93,7 @@ public class TCPMapperSul
             }
         );
 
-        socketSul = new SocketMapperSul(sock);
+        socketSul = new SocketMapperSUL(sock);
     }
 
     // Before each query we create a blank context

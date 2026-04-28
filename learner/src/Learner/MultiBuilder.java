@@ -46,7 +46,7 @@ public class MultiBuilder
         TCPInput,
         TCPOutput,
         ExecutionContext<TCPInput, TCPOutput, String>
-    > sulBuilder = new TCPSulBuilder();
+    > sulBuilder = new TCPSULBuilder();
     protected SULWrapper<
         TCPInput,
         TCPOutput,
@@ -56,13 +56,13 @@ public class MultiBuilder
     // SulClientConfigImpl and MapperConfigImpl need to be implemented
     @Override
     public StateFuzzerClientConfig buildClientConfig() {
-        return new TCPStateFuzzerClientConfig(new TCPSulClientConfig());
+        return new TCPStateFuzzerClientConfig(new TCPSULClientConfig());
     }
 
     // SulServerConfigImpl (and MapperConfigImpl) need to be implemented
     @Override
     public StateFuzzerServerConfig buildServerConfig() {
-        return new TCPStateFuzzerServerConfig(new TCPSulServerConfig());
+        return new TCPStateFuzzerServerConfig(new TCPSULServerConfig());
     }
 
     @Override

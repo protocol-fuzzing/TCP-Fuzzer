@@ -10,7 +10,7 @@ import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
 
-public class TCPSulBuilder
+public class TCPSULBuilder
     implements
         SULBuilder<
             TCPInput,
@@ -28,14 +28,14 @@ public class TCPSulBuilder
                 ExecutionContext<TCPInput, TCPOutput, String>
             > tcpSulConfig = null;
             if (sulConfig.isFuzzingClient()) {
-                tcpSulConfig = new TCPMapperSul(
-                    (TCPSulClientConfig) sulConfig,
+                tcpSulConfig = new TCPMapperSUL(
+                    (TCPSULClientConfig) sulConfig,
                     cleanupTasks
                 );
                 return tcpSulConfig;
             } else {
-                tcpSulConfig = new TCPMapperSul(
-                    (TCPSulServerConfig) sulConfig,
+                tcpSulConfig = new TCPMapperSUL(
+                    (TCPSULServerConfig) sulConfig,
                     cleanupTasks
                 );
                 return tcpSulConfig;

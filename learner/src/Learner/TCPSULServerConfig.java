@@ -3,19 +3,19 @@ package Learner;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULServerConfigStandard;
 import com.beust.jcommander.ParametersDelegate;
 
-public class TCPSulServerConfig
+public class TCPSULServerConfig
     extends SULServerConfigStandard
     implements TCPMapperConfigProvider {
 
     @ParametersDelegate
-    private TCPMapperConfig sshMapperConfig;
+    private TCPMapperConfig tcpMapperConfig;
 
-    public TCPSulServerConfig() {
-        sshMapperConfig = new TCPMapperConfig();
+    public TCPSULServerConfig() {
+        tcpMapperConfig = new TCPMapperConfig();
     }
 
     @Override
     public TCPMapperConfig getTCPMapperConfig() {
-        return sshMapperConfig;
+        return tcpMapperConfig;
     }
 }
