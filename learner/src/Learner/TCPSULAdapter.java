@@ -1,8 +1,8 @@
 package Learner;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulAdapter;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULAdapter;
 
-public class TCPSulAdapter implements SulAdapter {
+public class TCPSULAdapter implements SULAdapter {
 
     @Override
     public void connect() {
@@ -33,7 +33,7 @@ public class TCPSulAdapter implements SulAdapter {
     }
 
     @Override
-    public Integer getSulPort() {
+    public Integer getSULPort() {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException(
             "Unimplemented method 'getSulPort'"

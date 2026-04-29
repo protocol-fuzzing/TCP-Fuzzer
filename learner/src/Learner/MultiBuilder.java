@@ -4,9 +4,9 @@ import com.github.protocolfuzzing.protocolstatefuzzer.components.learner.alphabe
 import com.github.protocolfuzzing.protocolstatefuzzer.components.learner.alphabet.AlphabetBuilderStandard;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.learner.alphabet.xml.AlphabetSerializerXml;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.learner.statistics.MealyMachineWrapper;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulBuilder;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulWrapper;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SulWrapperStandard;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULBuilder;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapper;
+import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapperStandard;
 import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 import com.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.core.StateFuzzer;
 import com.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.core.StateFuzzerBuilder;
@@ -42,27 +42,27 @@ public class MultiBuilder
         );
 
     // ExecutionContextImpl, SulBuilderImpl need to be implemented
-    protected SulBuilder<
+    protected SULBuilder<
         TCPInput,
         TCPOutput,
         ExecutionContext<TCPInput, TCPOutput, String>
-    > sulBuilder = new TCPSulBuilder();
-    protected SulWrapper<
+    > sulBuilder = new TCPSULBuilder();
+    protected SULWrapper<
         TCPInput,
         TCPOutput,
         ExecutionContext<TCPInput, TCPOutput, String>
-    > sulWrapper = new SulWrapperStandard<>();
+    > sulWrapper = new SULWrapperStandard<>();
 
     // SulClientConfigImpl and MapperConfigImpl need to be implemented
     @Override
     public StateFuzzerClientConfig buildClientConfig() {
-        return new TCPStateFuzzerClientConfig(new TCPSulClientConfig());
+        return new TCPStateFuzzerClientConfig(new TCPSULClientConfig());
     }
 
     // SulServerConfigImpl (and MapperConfigImpl) need to be implemented
     @Override
     public StateFuzzerServerConfig buildServerConfig() {
-        return new TCPStateFuzzerServerConfig(new TCPSulServerConfig());
+        return new TCPStateFuzzerServerConfig(new TCPSULServerConfig());
     }
 
     @Override

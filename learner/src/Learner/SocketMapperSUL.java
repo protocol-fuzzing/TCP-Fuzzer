@@ -9,12 +9,12 @@ import java.net.Socket;
 /**
  * Socket interface with the external SSH mapper (test harness).
  */
-public class SocketMapperSul {
+public class SocketMapperSUL {
 
     private PrintWriter sockout;
     private BufferedReader sockin;
 
-    public SocketMapperSul(Socket sock) {
+    public SocketMapperSUL(Socket sock) {
         try {
             // Create socket out (no buffering) and in
             sockout = new PrintWriter(sock.getOutputStream(), true);
