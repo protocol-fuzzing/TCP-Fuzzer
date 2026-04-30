@@ -4,6 +4,7 @@ readonly ENV_DIR=${MAPPER_SCRIPT_DIR}/.venv
 
 # Installing dependencies
 echo "Installing dependencies where necessary."
+sudo apt-get update
 sudo apt-get install -y libcap-dev
 
 if [[ -d ${ENV_DIR} ]]
