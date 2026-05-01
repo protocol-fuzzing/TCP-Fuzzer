@@ -1,0 +1,100 @@
+=== RUN DESCRIPTION ===
+Alphabet: [S, A, FA]
+
+### StateFuzzerConfigStandard Parameters
+# -help
+# -debug
+# -quiet
+-output
+output/o_2026-04-30_12-16-06
+
+### LearnerConfigStandard Parameters
+-alphabet
+/home/pfg666/GitHub/tools/TCP-Fuzzer/config/basic.xml
+-learningAlgorithm
+TTT
+-equivalenceAlgorithms
+RANDOM_WP_METHOD
+-depth
+1
+-minLength
+5
+-maxLength
+15
+-randLength
+5
+-eqvQueries
+100
+-memQueryRuns
+1
+-memQueryRetries
+3
+# -logQueries
+-probReset
+0.0
+# -testFile
+-seed
+0
+# -cacheTests
+# -ceSanitizationDisable
+# -skipNonDetTests
+-ceReruns
+3
+# -probabilisticSanitizationDisable
+# -timeLimit
+# -testLimit
+# -roundLimit
+-eqvThreads
+1
+
+### SULConfigStandard Parameters
+-responseWait
+100
+# -inputResponseTimeout
+-command
+python3 /home/pfg666/GitHub/tools/TCP-Fuzzer/sutadapter/serverAdapter.py --port 9000
+# -terminateCommand
+# -processDir
+# -redirectOutputStreams
+-processTrigger
+NEW_TEST
+-startWait
+50
+
+### SULServerConfigStandard Parameters
+-connect
+localhost:18200
+
+### MapperConfigStandard Parameters
+# -mapperConnectionConfig
+# -repeatingOutputs
+# -socketClosedAsTimeout
+# -disabledAsTimeout
+# -dontMergeRepeating
+
+### SULAdapterConfigStandard Parameters
+# -adapterPort
+-adapterAddress
+localhost
+
+=== STATISTICS ===
+Learning finished: true
+Size of the input alphabet: 3
+Number of states: 5
+Number of hypotheses: 3
+Number of inputs: 1120
+Number of tests: 109
+Number of learning inputs: 89
+Number of learning tests: 27
+Number of inputs up to last hypothesis: 239
+Number of tests up to last hypothesis: 41
+Time (ms) to learn model: 302925
+Counterexamples:
+CE 1:Query[ε|A A FA FA FA S FA FA S A FA / timeout timeout timeout timeout timeout SA FA SOCKET_CLOSED SOCKET_CLOSED SOCKET_CLOSED SOCKET_CLOSED]
+CE 2:Query[ε|S A A S S A A FA S FA S S / SA timeout timeout A timeout timeout timeout FA SOCKET_CLOSED SOCKET_CLOSED SOCKET_CLOSED SOCKET_CLOSED]
+Number of inputs when hypothesis was generated: [3, 95, 239]
+Number of tests when hypothesis was generated: [3, 23, 41]
+Time (ms) when hypothesis was generated: [2799, 43975, 95216]
+Number of inputs when counterexample was found: [47, 201]
+Number of tests when counterexample was found: [7, 33]
+Time (ms) when counterexample was found: [16834, 74894]
