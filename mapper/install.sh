@@ -6,6 +6,7 @@ readonly ENV_DIR=${MAPPER_SCRIPT_DIR}/.venv
 echo "Installing dependencies where necessary."
 sudo apt-get update
 sudo apt-get install -y libcap-dev tcpdump
+dpkg -s libcap-dev >/dev/null 2>&1 || echo "Failed to install libcap-dev"; exit 1
 
 if [[ -d ${ENV_DIR} ]]
 then
