@@ -16,7 +16,7 @@ function install_learner() {
     
     if [[ $? -ne 0 ]]; then
         echo "Failed to install Learner"
-        exit
+        exit 1
     else 
         echo "Learner installed successfully"
     fi
@@ -30,7 +30,7 @@ function install_mapper() {
     )
     if [[ $? -ne 0 ]]; then
         echo "Failed to install Mapper"
-        exit
+        exit 1
     else 
         echo "Mapper installed successfully"
     fi
