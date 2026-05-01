@@ -80,8 +80,10 @@ _Mapper_ (previously known as Network Adapter) is a Python tool which performs a
 
 _TCP Entity_ is your TCP stack, which at present can only be a server (client support WIP). _TCP Adapter_ envelops a _TCP Entity_, and is used to perform socket commands on it.
 
-## Acknowledgements
-The tool was originally developed by Isaac Westerman as part of his Bachelor's thesis. The code is based on [tcp-learner](https://github.com/pfg666/tcp-learner), a TCP protocol-state fuzzer developed by Paul Fiterau and Ramon Janssen.
+## Credits
+Paul Fiterau and Ramon Janssen implemented [tcp-learner](https://github.com/pfg666/tcp-learner), the first incarnation of the tool.
+Isaac Westerman, as part of his Bachelor's thesis, updated the tool (see repository [here](https://github.com/GhishNchips/TCP-Fuzzer)) and renamed it to **TCP-Fuzzer**.
+Development has since moved to this repository.
 
 [psf]:https://github.com/protocol-fuzzing/protocol-state-fuzzer/
 [tcplearner]:https://github.com/pfg666/tcp-learner
