@@ -15,6 +15,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install Learner
         run: cd learner; ./install.sh
       - name: Install Mapper
@@ -33,6 +37,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install TCP-Fuzzer
         run: ./install.sh
       - name: Test Ubuntu 24.04

@@ -5,7 +5,7 @@ readonly ENV_DIR=${MAPPER_SCRIPT_DIR}/.venv
 # Installing dependencies
 echo "Installing dependencies where necessary."
 sudo apt-get update
-sudo apt-get install -y libcap-dev
+sudo apt-get install -y libcap-dev tcpdump
 
 if [[ -d ${ENV_DIR} ]]
 then
@@ -15,7 +15,9 @@ else
     python3 -m venv $ENV_DIR
     source $ENV_DIR/bin/activate
     echo "Installing required libraries"
+    pip install --upgrade pip
     pip install -r ${MAPPER_SCRIPT_DIR}/requirements.txt
+    python -c "import scapy.all" || echo "Failed to install Scapy"; exit 1
 fi
 
 # If the script is being sourced, activate the environment
