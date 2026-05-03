@@ -1,17 +1,11 @@
 # TCP-Fuzzer 🌐📠
-TCP-Fuzzer is a tool for protocol-state-fuzzing TCP implementations. It is a revamped version of [tcp-learner][tcp-learner], a tool that had been used to test Windows and POSIX stacks.
+TCP-Fuzzer is a tool for protocol-state-fuzzing TCP implementations.
+It is a revamped version of [tcp-learner][tcp-learner], a tool that had been used to test Windows and POSIX stacks (for details, check [CAV][cav16] and [FMICS/AVOCS][fmics17] publications).
 TCP-Fuzzer is currently WIP and undergoing major restructuring.
 
 ## Requirements
 The tool has been tested to work only on Linux.
 It needs Python 3.12 (or later), Java JDK 21 (or later), Maven and `libcap-dev`.
-
-## Development status
-
-TCP-Fuzzer currently supports only learning servers.
-It does not yet support learning clients or learning with socket commands (both supported by [tcp-learner][tcp-learner]).
-These features are planned for future development.
-Setting the tool in an isolated environment using Docker is WIP, with (outdated/untested) Dockerfiles being available.
 
 ## Installation
 `cd` to the fuzzer directory.
@@ -26,7 +20,7 @@ This should create two directories:
 - `mapper\.venv`, which contains the Python virtual environment of the mapper.
 
 ### Isolated environment
-This is not fully supported, but in principle one should run:
+This is not yet supported, but in principle one should run:
 
 ```
 docker compose up
@@ -98,11 +92,20 @@ java -jar learner/target/TCP-Learner.jar config/learner_args
 You should be able to see activity in both the _Mapper_ and _Learner_ terminals.
 Results of learning will be stored in a folder inside the `output` directory.
 
+## Development status
+
+TCP-Fuzzer currently supports only learning servers.
+It does not yet support learning clients or learning with socket commands (both supported by [tcp-learner][tcp-learner]).
+These features are planned for future development.
+Setting the tool in an isolated environment using Docker is WIP, with (outdated/untested) Dockerfiles being available.
 
 ## Credits
 Paul Fiterau and Ramon Janssen implemented [tcp-learner][tcp-learner], the first incarnation of the tool.
-Isaac Westerman, as part of his Bachelor's thesis, updated the tool (see repository [here](https://github.com/GhishNchips/TCP-Fuzzer)) and renamed it to **TCP-Fuzzer**.
+Isaac Westerman, as part of his [Bachelor's thesis][thesisisaac], updated the tool (see repository [here](https://github.com/GhishNchips/TCP-Fuzzer)) and renamed it to **TCP-Fuzzer**.
 Development has since moved to this repository.
 
 [psf]:https://github.com/protocol-fuzzing/protocol-state-fuzzer/
-[tcplearner]:https://github.com/pfg666/tcp-learner
+[tcp-learner]:https://github.com/pfg666/tcp-learner
+[cav16]:https://link.springer.com/chapter/10.1007/978-3-319-41540-6_25
+[fmics17]:https://link.springer.com/chapter/10.1007/978-3-319-67113-0_12
+[thesisisaac]:https://www.diva-portal.org/smash/record.jsf?pid=diva2%3A1994746&dswid=-2667
