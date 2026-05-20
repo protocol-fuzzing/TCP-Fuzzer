@@ -127,7 +127,7 @@ public class TCPMapperSul
         this.mapper.updateInput(in, this.context);
         String output;
         // Reset does not need seq and ack numbers
-        if (in.getName() == "reset") {
+        if (in.getName().equals("reset")) {
             output = socketSul.sendAndRecv(in.getName());
         } else {
             socketSul.send(in.getName());
