@@ -35,6 +35,10 @@ class Sender:
         #set verbosity (0/1)
         self.isVerbose = isVerbose
 
+        # track the last seq/ack received from the server, used during reset to send a valid RST
+        self.lastRecvSeq = 0
+        self.lastRecvAck = 0
+
 
     def __str__(self):
         return "Sender with parameters: " + str(self.__dict__)
@@ -197,6 +201,8 @@ class Sender:
             global seqVar, ackVar
             seqVar = response.seq
             ackVar = response.ack
+            self.lastRecvSeq = response.seq
+            self.lastRecvAck = response.ack
         return response
 
     # resets by way of a valid reset. Requires a valid sequence number. Avoids problems encountered with the maximum

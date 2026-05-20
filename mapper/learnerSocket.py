@@ -146,7 +146,11 @@ class LearnerSocket:
             match(input):
                 case "reset":
                     print("Received reset signal.")
-                    self.sender.sendReset()
+                    # send a RST to close the server's connection before changing ports.
+                    # without this, the server stays in ESTABLISHED state and ignores new SYNs.
+                    # this needs to be sent after each membership query.
+                    self.sender.sendInput("R", self.sender.lastRecvAck, 0, '')
+                    self.sender.sendReset() # refresh local port
                     self.sendOutput("resetok")
                     print('-'*60)
                 case "exit":
