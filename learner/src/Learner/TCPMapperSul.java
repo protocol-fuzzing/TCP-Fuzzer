@@ -126,7 +126,11 @@ public class TCPMapperSul
 
         this.mapper.updateInput(in, this.context);
         String output;
-        // Reset does not need seq and ack numbers
+        /*
+        Reset does not need seq and ack numbers  
+        The "reset" special case is for the control reset 
+        (telling the mapper to change ports), not for a TCP RST packet.
+         */
         if (in.getName().equals("reset")) {
             output = socketSul.sendAndRecv(in.getName());
         } else {
