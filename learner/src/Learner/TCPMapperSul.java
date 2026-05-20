@@ -119,11 +119,6 @@ public class TCPMapperSul
 
     @Override
     public TCPOutput step(TCPInput in) {
-        // If we send an S or an F we technically send one bit of data
-        if(in.getName().contains("S") || in.getName().contains("F")) {
-            this.context.getState().setAck(this.context.getState().getAck() + 1);
-        }
-
         this.mapper.updateInput(in, this.context);
         String output;
         /*
@@ -145,25 +140,32 @@ public class TCPMapperSul
         } else {
             // Split the returned packet (it has format "seq,ack,flags")
             String[] split = output.split(",");
+            String outputFlags = split[2];
+            String outputAck = split[1];
+            String outputSeq = split[0];
 
-            if (split[2].contains("R")) {
+            if (outputFlags.contains("R")) {
                 // If reset is recevied we reset sequence and acknowledgement numbers                
                 startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
                 context.getState().setSeq(startSeq);
                 context.getState().setAck(startSeq + 1);
-            } else if (split[2].contains("A")) {
-                // Update seq and ack if ack number is valid
-                context.getState().setSeq(Long.parseLong(split[1]));
-                context.getState().setAck(Long.parseLong(split[0]) + 1);
+            } 
+            // we update the seq number to the output's ack number
+            // regardless if output contains a 'A' flag
+            context.getState().setSeq(Long.parseLong(outputAck));
+
+            // if the output contains a 'S' or 'F' flag, we increment the ack number by 1
+            if (outputFlags.contains("S") || outputFlags.contains("F")) {
+                context.getState().setAck(Long.parseLong(outputSeq) + 1);
             } else {
-                // otherwise we just update our ACK (since input ack is not valid)
-                context.getState().setAck(Long.parseLong(split[0]) + 1);
+                // otherwise we set the ack number to the output's seq number
+                context.getState().setAck(Long.parseLong(outputSeq));
             }
 
             return new TCPOutput(
-                split[2],
-                Long.parseLong(split[0]),
-                Long.parseLong(split[1])
+                outputFlags,
+                Long.parseLong(outputSeq),
+                Long.parseLong(outputAck)
             );
         }
     }
