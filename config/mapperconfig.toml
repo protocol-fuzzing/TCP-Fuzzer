@@ -3,6 +3,6 @@ ip = "0.0.0.0"
 port = 18200
 
 [SUT]
-ip = "localhost"
+ip = "192.168.184.129"
 port = 9000
-waittime = 0.4
+waittime = 1
