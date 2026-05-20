@@ -114,7 +114,7 @@ class Sender:
         if packet is not None:
             self.clientIP = packet[IP].src
             # consider adding the parameter: iface="ethx" if you don't receive a response. Also consider increasing the wait time
-            response = sr1(packet, timeout=waitTime, iface=self.networkInterface, verbose=self.isVerbose)
+            response = sr1(packet, timeout=waitTime, verbose=self.isVerbose)
 
             return response if response is not None else Timeout()
 
