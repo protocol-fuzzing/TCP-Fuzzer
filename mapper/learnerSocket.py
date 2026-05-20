@@ -192,7 +192,7 @@ class LearnerSocket:
             self.fault("invalid input " + input)
 
         if type(response) is not Timeout:
-            print('received ' + str(response['TCP'].flags) + " " + str(response.ack) + " " + str(response.seq) + "\n")
+            print('received ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack) + "\n")
             self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + str(response['TCP'].flags))
         else:
             print("received timeout")
