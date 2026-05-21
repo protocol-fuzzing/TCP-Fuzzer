@@ -118,13 +118,24 @@ class Sender:
         if packet is not None:
             self.clientIP = packet[IP].src
 
-            # used sr instead of sr1 to capture multiple responses 
+            # Used sr instead of sr1 to capture multiple responses 
             # e.g. the Ubuntu server in response to FA, sometimes sends 
             # two separate packets, one with 'A' flag and one with 'FA' flag, 
             # instead of one packet with 'FA' flag.
-
             answered, unanswered = sr(packet, timeout=waitTime, verbose=self.isVerbose, multi=True)
             responses = [rcv for snd, rcv in answered]
+
+            # Drop responses addressed to the wrong port — these are stale packets from a
+            # previous test that used a different local port and arrived late.
+            expected_dport = self.senderPort
+            valid_responses = []
+            for resp in responses:
+                if resp['TCP'].dport != expected_dport:
+                    print(f'*** Dropping stale packet: dport={resp["TCP"].dport} expected {expected_dport} ***')
+                else:
+                    valid_responses.append(resp)
+            responses = valid_responses
+
             if len(responses) == 0:
                 return Timeout()
             elif len(responses) == 1:
