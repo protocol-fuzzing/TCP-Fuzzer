@@ -1,4 +1,4 @@
-from scapy.all import sr1, IP, TCP
+from scapy.all import sr, sr1, IP, TCP
 from response import Timeout, ConcreteResponse
 import re
 import time
@@ -14,7 +14,7 @@ class Sender:
     def __init__(self, serverMAC=None, serverIP="191.168.10.1", serverPort = 7991,
              networkInterface="lo", networkInterfaceType=0, senderPort=15000, senderPortMinimum=20000,
              senderPortMaximum=40000, portNumberFile = "sn.txt",
-             isVerbose=0, waitTime=0.02, resetMechanism=0):
+             isVerbose=0, waitTime=0.1, resetMechanism=0): # increased default waitTime of server to 0.1 to capture multiple responses (sr)
         # data on sender and server needed to send packets
         self.serverIP = serverIP
         self.serverPort = serverPort
@@ -117,10 +117,25 @@ class Sender:
 
         if packet is not None:
             self.clientIP = packet[IP].src
-            # consider adding the parameter: iface="ethx" if you don't receive a response. Also consider increasing the wait time
-            response = sr1(packet, timeout=waitTime, verbose=self.isVerbose)
 
-            return response if response is not None else Timeout()
+            # used sr instead of sr1 to capture multiple responses 
+            # e.g. the Ubuntu server in response to FA, sometimes sends 
+            # two separate packets, one with 'A' flag and one with 'FA' flag, 
+            # instead of one packet with 'FA' flag.
+
+            answered, unanswered = sr(packet, timeout=waitTime, verbose=self.isVerbose, multi=True)
+            responses = [rcv for snd, rcv in answered]
+            if len(responses) == 0:
+                return Timeout()
+            elif len(responses) == 1:
+                response = responses[0]
+                return response
+            else: #len (responses) > 1: multiple replies
+                # TODO: add the merge logic for multiple responsess here ('A', 'FA' -> 'FA')
+                #merge(responses)
+                return responses [0]
+
+
 
     # FIXME possibly refactor response.py a bit, the names are confusing
     def scapyResponseParse(self, scapyResponse):
