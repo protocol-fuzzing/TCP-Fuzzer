@@ -39,6 +39,10 @@ class Sender:
         self.lastRecvSeq = 0
         self.lastRecvAck = 0
 
+        # Tracks seen packets (by seq/ack/flags) across all sr() calls within one test,
+        # cleared on reset so duplicates/retransmissions within a test are filtered out.
+        self.response_history = set()
+
 
     def __str__(self):
         return "Sender with parameters: " + str(self.__dict__)
@@ -135,6 +139,19 @@ class Sender:
                 else:
                     valid_responses.append(resp)
             responses = valid_responses
+
+            # Deduplicate retransmissions across all sr() calls within this test.
+            # self.response_history is cleared on reset, so it spans exactly one test.
+            unique_responses = []
+           
+            for resp in responses:
+                key = (resp['TCP'].seq, resp['TCP'].ack, int(resp['TCP'].flags))
+                if key in self.response_history:
+                    print('*** Retransmitted packet, ignoring duplicate: ' + str(resp['TCP'].flags) + " " + str(resp.seq) + " " + str(resp.ack) + ' ***')
+                else:
+                    self.response_history.add(key)
+                    unique_responses.append(resp)
+            responses = unique_responses
 
             if len(responses) == 0:
                 return Timeout()
@@ -243,6 +260,7 @@ class Sender:
     # connections opened on a port, packets are sent to close down connections, which affects learning. TCP configurations
     # can be altered, but I'd say in case learning involves many queries, use the other method.
     def sendReset(self):
+        self.response_history.clear() # new test starts, forget seen packets.
         self.refreshNetworkPort()
 
 
