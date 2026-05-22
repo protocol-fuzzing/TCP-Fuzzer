@@ -170,8 +170,8 @@ class Sender:
                     # This can happen if the server sends multiple distinct packets (e.g., A then FA
                     # with incremented seq). For now, fall back to the packet with the highest seq.
                     print('Bug: multiple responses with different seq/ack — falling back to highest seq packet')
-                    merged_response = max(responses, key=lambda pkt: pkt['TCP'].seq)
-                return merged_response
+                    merged_responses = max(responses, key=lambda pkt: pkt['TCP'].seq)
+                return merged_responses
 
     # Merges multiple responses into one Scapy packet by OR-ing all TCP flags.
     # All responses must share the same seq and ack numbers (checked by the caller).
