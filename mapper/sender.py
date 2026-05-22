@@ -23,7 +23,7 @@ class Sender:
         self.senderPort = senderPort
         self.senderPortMinimum = senderPortMinimum
         self.senderPortMaximum = senderPortMaximum
-        self.portNumberFile = portNumberFile;
+        self.portNumberFile = portNumberFile
 
         # time to wait for a response from the server before concluding a timeout
         self.waitTime = waitTime
@@ -71,10 +71,10 @@ class Sender:
                 networkPort = self.senderPortMinimum
             else:
                 networkPort = self.senderPortMinimum + (int(line) + 1) % senderPortRange
-        f.closed
+        f.close()
         f = open(self.portNumberFile, "w")
         f.write(str(networkPort))
-        f.closed
+        f.close()
         return networkPort
 
     def sendPacket(self,flagsSet, seqNr, ackNr):
@@ -84,7 +84,7 @@ class Sender:
         return response
 
     def setServerPort(self, newPort):
-        self.serverPort = newPort;
+        self.serverPort = newPort
 
     def setSenderPort(self, newPort):
         self.senderPort = newPort
@@ -244,7 +244,7 @@ class Sender:
     def captureResponse(self, waitTime=None):
         if waitTime is None:
             waitTime = self.waitTime
-        return self.sendInput("nil", None, None, None, waitTime);
+        return self.sendInput("nil", None, None, None, waitTime)
 
     # sends input over the network to the server
     def sendInput(self, flags, seqNr, ackNr, payload, waitTime=None):

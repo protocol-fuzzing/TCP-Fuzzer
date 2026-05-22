@@ -1,5 +1,5 @@
 from time import sleep
-__author__ = 'paul,ramon,isaac'
+__author__ = 'paul,ramon,isaac,behnaz'
 import socket
 from select import select
 import time
@@ -179,20 +179,20 @@ class LearnerSocket:
             ackNr = self.receiveNumber()
             payload = self.receiveInput()[1:-1]
             print(("-> send: " + input + " " + str(seqNr) + " " + str(ackNr)))
-            response = self.sender.sendInput(input, seqNr, ackNr, payload);
+            response = self.sender.sendInput(input, seqNr, ackNr, payload)
         elif "sendAction" in dir(self.sender) and self.sender.isAction(input):
             # TODO this functionality seems to pertain to sending actions to the SUTAdapter, but that's been split off to a different file.
             print(("send action: " +input))
             input = input.lower().replace("\n","")
             try:
-                response = sender.sendAction(input) # response might arrive before sender is ready
+                response = self.sender.sendAction(input) # response might arrive before sender is ready
             except Exception as e:
                 print(str(e))
                 response = "BROKENPIPE"
         elif input == "nil":
             # TODO in what case is this used?
             print("send nothing (nil)")
-            response = sender.captureResponse()
+            response = self.sender.captureResponse()
         else:
             self.fault("invalid input " + input)
 
