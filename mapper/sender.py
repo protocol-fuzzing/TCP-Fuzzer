@@ -159,12 +159,36 @@ class Sender:
                 response = responses[0]
                 return response
             else: #len (responses) > 1: multiple replies
-                # TODO: add the merge logic for multiple responsess here ('A', 'FA' -> 'FA')
-                #merge(responses)
-                return responses [0]
+                base_seq = responses[0]['TCP'].seq
+                base_ack = responses[0]['TCP'].ack
 
+                # if all responses share the same seq and ack numbers,merge them into one response with combined flags.
+                if all(pkt['TCP'].seq == base_seq and pkt['TCP'].ack == base_ack for pkt in responses):
+                    merged_responses = self.merge_responses(responses)
+                else:
+                    # TODO: Handle the case where responses have different seq/ack numbers.
+                    # This can happen if the server sends multiple distinct packets (e.g., A then FA
+                    # with incremented seq). For now, fall back to the packet with the highest seq.
+                    print('Bug: multiple responses with different seq/ack — falling back to highest seq packet')
+                    merged_response = max(responses, key=lambda pkt: pkt['TCP'].seq)
+                return merged_response
 
-
+    # Merges multiple responses into one Scapy packet by OR-ing all TCP flags.
+    # All responses must share the same seq and ack numbers (checked by the caller).
+    def merge_responses(self, responses): 
+        merged_flags = 0
+        pktFlags = [] 
+        for pkt in responses:
+            pktFlags.append(pkt['TCP'].flags)
+            merged_flags |= int(pkt['TCP'].flags)
+        merged = responses[0].copy()
+        merged['TCP'].flags = merged_flags
+        flag_strs = ', '.join(self.intToFlags(int(f)) for f in pktFlags)
+        merged_str = self.intToFlags(merged_flags)
+        print(f'*** Merging responses:  {flag_strs} -> {merged_str} ***')
+        return merged
+    
+    
     # FIXME possibly refactor response.py a bit, the names are confusing
     def scapyResponseParse(self, scapyResponse):
         """Extracts the relevant TCP data from the scapy response"""
