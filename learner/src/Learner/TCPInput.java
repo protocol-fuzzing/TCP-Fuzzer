@@ -65,4 +65,13 @@ public class TCPInput
     ) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public String toString() {
+        // Display P and PA with a data label in dot outputs.
+        if (this.name.equals("P") || this.name.equals("PA")) {
+            return this.name + "+data";
+        }
+        return this.name;
+    }
 }
