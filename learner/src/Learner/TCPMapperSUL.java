@@ -129,37 +129,51 @@ public class TCPMapperSUL
         if (in.getName().equals("reset")) {
             output = socketSul.sendAndRecv(in.getName());
         } else {
+            String inputPayload = "";
+            if (in.getName().contains("P")){
+                inputPayload = "x" ;
+            }
             socketSul.send(in.getName());
             socketSul.send(String.valueOf(in.getSeq()));
             socketSul.send(String.valueOf(in.getAck()));
-            output = socketSul.sendAndRecv("");
+            output = socketSul.sendAndRecv(inputPayload); // without 'P' flag, payload is empty.
         }
 
-        if (output.equals("timeout")) {
+         if (output.equals("timeout")) {
             return new TCPOutput("timeout");
         } else {
-            // Split the returned packet (it has format "seq,ack,flags")
-            String[] split = output.split(",");
-            String outputFlags = split[2];
-            String outputAck = split[1];
+            // Split the returned packet (it has format "seq,ack,flags,payloadHex").
+            String[] split = output.split(",", 4);
             String outputSeq = split[0];
+            String outputAck = split[1];
+            String outputFlags = split[2];
+            String outputPayloadHex = split.length > 3 ? split[3] : "";
 
             if (outputFlags.contains("R")) {
-                // If reset is recevied we reset sequence and acknowledgement numbers                
+                // If reset is recevied we reset sequence and acknowledgement numbers.                
                 startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
                 context.getState().setSeq(startSeq);
                 context.getState().setAck(startSeq + 1);
-            } 
-            // we update the seq number to the output's ack number
-            // regardless if output contains a 'A' flag
-            context.getState().setSeq(Long.parseLong(outputAck));
-
-            // if the output contains a 'S' or 'F' flag, we increment the ack number by 1
-            if (outputFlags.contains("S") || outputFlags.contains("F")) {
-                context.getState().setAck(Long.parseLong(outputSeq) + 1);
             } else {
-                // otherwise we set the ack number to the output's seq number
-                context.getState().setAck(Long.parseLong(outputSeq));
+                // We update the seq number to the output's ack number 
+                // regardless if the output contains a 'A' flag.
+                context.getState().setSeq(Long.parseLong(outputAck));
+
+                int ackIncrement = 0; 
+                int payloadLength = 0;
+
+                // If the output contains a payload (indicated by the presence of 'P' flag), we increment the ack number by the payload length.
+                if (outputPayloadHex != null && !outputPayloadHex.isEmpty() && outputFlags.contains("P")) {
+                    payloadLength = outputPayloadHex.length() / 2; // Each byte is represented by 2 hex characters.
+                    ackIncrement += payloadLength;
+                }
+                
+                // If the output contains a 'S' or 'F' flag, we increment the ack number.
+                if (outputFlags.contains("S") || outputFlags.contains("F")) {
+                    ackIncrement += 1;
+                }
+
+                context.getState().setAck(Long.parseLong(outputSeq) + ackIncrement);
             }
 
             return new TCPOutput(

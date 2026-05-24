@@ -1,4 +1,4 @@
-from scapy.all import sr, sr1, IP, TCP
+from scapy.all import sr, sr1, IP, TCP, Raw
 from response import Timeout, ConcreteResponse
 import re
 import time
@@ -109,8 +109,11 @@ class Sender:
         ack=ackNr,
         flags=tcpFlagsSet)
 
-        # Either we have a payload or we don't
-        p = pIP / pTCP #/ Raw(load=payload) if payload else pIP / pTCP
+        # Either we have a payload or we don't.
+        if payload:
+            p = pIP / pTCP / Raw(load=payload)
+        else:
+            p = pIP / pTCP        
         return p
 
     def sendAndRecv(self, packet, waitTime = None):
@@ -146,7 +149,12 @@ class Sender:
            
             for resp in responses:
                 key = (resp['TCP'].seq, resp['TCP'].ack, int(resp['TCP'].flags))
-                if key in self.response_history:
+                # Ubuntu in synchronized states, upon receiving unexpected packetes (e.g. 'S' when in Established),
+                # responds with empty acknowledgment segement ('A') containing the current same sequenece number and 
+                # acknowledgment number and stays in the same state.
+                # we need to distinguish retransmissions from these empty acknowledgments that might be sent multiple times
+                # in response to multiple unexpected packets (They all have the same seq/ack/flags hence the same key in the history set).
+                if key in self.response_history and self.intToFlags(int(resp['TCP'].flags)) != 'A':
                     print('*** Retransmitted packet, ignoring duplicate: ' + str(resp['TCP'].flags) + " " + str(resp.seq) + " " + str(resp.ack) + ' ***')
                 else:
                     self.response_history.add(key)
@@ -182,6 +190,14 @@ class Sender:
             pktFlags.append(pkt['TCP'].flags)
             merged_flags |= int(pkt['TCP'].flags)
         merged = responses[0].copy()
+            
+        # Use the packet with a payload as the base, so the payload is preserved in the merge.
+        responses_with_payload = [pkt for pkt in responses if pkt.haslayer(Raw)]
+        if len(responses_with_payload) > 1:
+            pass  # TODO: multiple responses have a payload — figure out which one to use.
+        elif len(responses_with_payload) == 1:
+            merged = responses_with_payload[0].copy()
+
         merged['TCP'].flags = merged_flags
         flag_strs = ', '.join(self.intToFlags(int(f)) for f in pktFlags)
         merged_str = self.intToFlags(merged_flags)

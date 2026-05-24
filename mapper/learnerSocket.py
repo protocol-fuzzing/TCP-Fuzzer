@@ -5,6 +5,7 @@ from select import select
 import time
 import sys
 import signal
+from scapy.all import Raw
 from response import Timeout
 
 
@@ -177,8 +178,11 @@ class LearnerSocket:
         if self.sender.isFlags(input):
             seqNr = self.receiveNumber()
             ackNr = self.receiveNumber()
-            payload = self.receiveInput()[1:-1]
-            print(("-> send: " + input + " " + str(seqNr) + " " + str(ackNr)))
+            payload = self.receiveInput()
+            if not payload:
+                print(("-> send: " + input + " " + str(seqNr) + " " + str(ackNr)))
+            else:
+                print(("-> send: " + input + " " + str(seqNr) + " " + str(ackNr) + " payload: " + payload))
             response = self.sender.sendInput(input, seqNr, ackNr, payload)
         elif "sendAction" in dir(self.sender) and self.sender.isAction(input):
             # TODO this functionality seems to pertain to sending actions to the SUTAdapter, but that's been split off to a different file.
@@ -197,8 +201,18 @@ class LearnerSocket:
             self.fault("invalid input " + input)
 
         if type(response) is not Timeout:
-            print('<- receive: ' + str(response['TCP'].flags) + " " + str(response.seq) + " " + str(response.ack) + "\n")
-            self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + str(response['TCP'].flags))
+            response_flags = self.sender.intToFlags(int(response['TCP'].flags))
+            # If not use .load to extract the payload, we get the raw bytes of the whole packet 
+            # (which contains extra zeros for padding) instead of just the payload, which is not what we want.
+            response_payload = response[Raw].load if response.haslayer(Raw) else b''
+            if response_payload:
+                print('<- receive: ' + response_flags + " " + str(response.seq) + " " +
+                       str(response.ack) + " payload: " + response_payload.decode('latin-1') + "\n")
+            else:
+                print('<- receive: ' + response_flags + " " + str(response.seq) + " " + 
+                      str(response.ack) + "\n")
+            self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + response_flags + 
+                            "," + response_payload.hex())
         else:
             print("received timeout \n")
             self.sendOutput("timeout")
