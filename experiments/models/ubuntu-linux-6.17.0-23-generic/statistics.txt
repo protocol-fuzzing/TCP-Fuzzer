@@ -1,0 +1,101 @@
+=== RUN DESCRIPTION ===
+Alphabet: [S, A, FA]
+
+### StateFuzzerConfigStandard Parameters
+# -help
+# -debug
+# -quiet
+-output
+output/o_2026-05-26_14-59-16
+
+### LearnerConfigStandard Parameters
+-alphabet
+/home/behnaz/Desktop/fuzzer/TCP-Fuzzer/config/basic.xml
+-learningAlgorithm
+TTT
+-equivalenceAlgorithms
+RANDOM_WP_METHOD
+-depth
+1
+-minLength
+5
+-maxLength
+15
+-randLength
+5
+-eqvQueries
+1000
+-memQueryRuns
+3
+-memQueryRetries
+3
+# -logQueries
+-probReset
+0.0
+# -testFile
+-seed
+0
+# -cacheTests
+# -ceSanitizationDisable
+# -skipNonDetTests
+-ceReruns
+3
+# -probabilisticSanitizationDisable
+# -timeLimit
+# -testLimit
+-roundLimit
+2
+-eqvThreads
+1
+
+### SULConfigStandard Parameters
+-responseWait
+100
+# -inputResponseTimeout
+-command
+python3 /home/behnaz/Desktop/fuzzer/TCP-Fuzzer/sutadapter/serverAdapter.py --port 9000
+# -terminateCommand
+# -processDir
+# -redirectOutputStreams
+-processTrigger
+NEW_TEST
+-startWait
+50
+
+### SULServerConfigStandard Parameters
+-connect
+localhost:18200
+
+### MapperConfigStandard Parameters
+# -mapperConnectionConfig
+# -repeatingOutputs
+# -socketClosedAsTimeout
+# -disabledAsTimeout
+# -dontMergeRepeating
+
+### SULAdapterConfigStandard Parameters
+# -adapterPort
+-adapterAddress
+localhost
+
+=== STATISTICS ===
+Learning finished: false
+Reason: hypothesis construction round limit reached
+Size of the input alphabet: 3
+Number of states: 4
+Number of hypotheses: 2
+Number of inputs: 299
+Number of tests: 85
+Number of learning inputs: 255
+Number of learning tests: 81
+Number of inputs up to last hypothesis: 299
+Number of tests up to last hypothesis: 85
+Time (ms) to learn model: 409013
+Counterexamples:
+CE 1:Query[ε|A A FA FA FA S FA FA S A FA / timeout timeout timeout timeout timeout SA FA timeout SA timeout FA]
+Number of inputs when hypothesis was generated: [9, 299]
+Number of tests when hypothesis was generated: [9, 85]
+Time (ms) when hypothesis was generated: [19505, 409012]
+Number of inputs when counterexample was found: [53]
+Number of tests when counterexample was found: [13]
+Time (ms) when counterexample was found: [70232]

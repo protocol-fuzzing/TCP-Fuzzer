@@ -16,27 +16,27 @@ function install_learner() {
     
     if [[ $? -ne 0 ]]; then
         echo "Failed to install Learner"
-        exit
+        exit 1
     else 
         echo "Learner installed successfully"
     fi
 }
 
-function install_mapper_env() {
-    echo "Installing Mapper environment"
+function install_mapper() {
+    echo "Installing Mapper"
     (
         cd ${MAPPER_DIR};
-        ./install_env.sh
+        ./install.sh
     )
     if [[ $? -ne 0 ]]; then
-        echo "Failed to install Mapper environment"
-        exit
+        echo "Failed to install Mapper"
+        exit 1
     else 
-        echo "Mapper environment installed successfully"
+        echo "Mapper installed successfully"
     fi
 }
 
 # Installing learner and mapper components
 install_learner
-install_mapper_env
+install_mapper
 

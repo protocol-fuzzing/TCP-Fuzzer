@@ -15,5 +15,33 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-      - name: Install
-        run: cd learner; ./install.sh
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install TCP-Fuzzer
+        run: ./install.sh
+
+  Linux_basic:
+    if: ${{ !contains(github.event.head_commit.message, 'ci skip') }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install TCP-Fuzzer
+        run: ./install.sh
+      - name: Test Ubuntu 24.04
+        run: |
+          ./run.sh -alphabet config/basic.xml -output output/ubuntu -eqvQueries 100 -roundLimit 2
+          ./diff_hyps.sh experiments/models/ubuntu-linux-6.17.0-23-generic output/ubuntu 2

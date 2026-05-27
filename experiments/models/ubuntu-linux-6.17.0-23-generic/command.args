@@ -4,10 +4,12 @@ localhost:18200
 -tcpMapperAddress
 localhost:18200
 -alphabet
-${fuzzer.dir}/config/alphabet.xml
+${fuzzer.dir}/config/basic.xml
 -memQueryRuns
 3
 -command
 python3 ${fuzzer.dir}/sutadapter/serverAdapter.py --port 9000
 -startWait
 50
+-roundLimit
+2
