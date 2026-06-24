@@ -99,8 +99,9 @@ You should be able to see activity in both the _Mapper_ and _Learner_ terminals.
 Results of learning will be stored in a folder inside the `output` directory.
 
 ## Credits
-Paul Fiterau and Ramon Janssen implemented [tcp-learner][tcplearner], the first incarnation of the tool.
-Isaac Westerman, as part of his Bachelor's thesis, updated the tool (see repository [here](https://github.com/GhishNchips/TCP-Fuzzer)) and renamed it to **TCP-Fuzzer**.
+- Paul Fiterau (pfg666) and Ramon Janssen built the first incarnation of this tool, called [tcp-learner](https://github.com/pfg666/tcp-learner);
+- Isaac Westerman, as part of his [Bachelor's thesis](https://www.diva-portal.org/smash/record.jsf?pid=diva2%3A1994746&dswid=8161), significantly revamped it, porting it to Python 3.x, newer version of Java and basing it on PSF, with the resulting code available [here](https://github.com/GhishNchips/TCP-Fuzzer);
+- The tool is now being developed by Behnaz Daneshkhah and Paul Fiterau.
 
 [psf]:https://github.com/protocol-fuzzing/protocol-state-fuzzer/
 [tcplearner]:https://github.com/pfg666/tcp-learner
