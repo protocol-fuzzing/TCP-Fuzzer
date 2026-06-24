@@ -99,7 +99,7 @@ You should be able to see activity in both the _Mapper_ and _Learner_ terminals.
 Results of learning will be stored in a folder inside the `output` directory.
 
 ## Credits
-Paul Fiterau and Ramon Janssen implemented [tcp-learner][tcp-learner], the first incarnation of the tool.
+Paul Fiterau and Ramon Janssen implemented [tcp-learner][tcplearner], the first incarnation of the tool.
 Isaac Westerman, as part of his Bachelor's thesis, updated the tool (see repository [here](https://github.com/GhishNchips/TCP-Fuzzer)) and renamed it to **TCP-Fuzzer**.
 
 [psf]:https://github.com/protocol-fuzzing/protocol-state-fuzzer/
