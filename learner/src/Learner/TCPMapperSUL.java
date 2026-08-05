@@ -5,14 +5,14 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSUL;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULAdapter;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULConfig;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.sulwrappers.DynamicPortProvider;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.sulwrappers.ProcessHandler;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.Mapper;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
-import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSUL;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULAdapter;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULConfig;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.sulwrappers.DynamicPortProvider;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.sulwrappers.ProcessHandler;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.Mapper;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
+import io.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
 
 public class TCPMapperSUL
     implements
@@ -142,12 +142,13 @@ public class TCPMapperSUL
          if (output.equals("timeout")) {
             return new TCPOutput("timeout");
         } else {
-            // Split the returned packet (it has format "seq,ack,flags,payloadHex").
-            String[] split = output.split(",", 4);
+            // Split the returned packet (it has format "seq,ack,flags,payloadHex,dpiRule").
+            String[] split = output.split(",", 5);
             String outputSeq = split[0];
             String outputAck = split[1];
             String outputFlags = split[2];
             String outputPayloadHex = split.length > 3 ? split[3] : "";
+            String outputDpiRule = split.length > 4 ? split[4] : "";
 
             if (outputFlags.contains("R")) {
                 // If reset is recevied we reset sequence and acknowledgement numbers.                
@@ -176,8 +177,13 @@ public class TCPMapperSUL
                 context.getState().setAck(Long.parseLong(outputSeq) + ackIncrement);
             }
 
+            String outputFlagsandDpiRule = outputFlags;
+            if (outputDpiRule != null && !outputDpiRule.isEmpty()) {
+                outputFlagsandDpiRule = outputFlags + "," + outputDpiRule;
+            }
+
             return new TCPOutput(
-                outputFlags,
+                outputFlagsandDpiRule,
                 Long.parseLong(outputSeq),
                 Long.parseLong(outputAck)
             );

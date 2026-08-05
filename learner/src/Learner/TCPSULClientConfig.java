@@ -1,6 +1,6 @@
 package Learner;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULClientConfigStandard;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULClientConfigStandard;
 import com.beust.jcommander.ParametersDelegate;
 
 public class TCPSULClientConfig

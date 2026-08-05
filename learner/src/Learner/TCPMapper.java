@@ -1,11 +1,11 @@
 package Learner;
 
 import Learner.TCPExecutionContext;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.Mapper;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.abstractsymbols.OutputBuilder;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.abstractsymbols.OutputChecker;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.config.MapperConfig;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.Mapper;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.abstractsymbols.OutputBuilder;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.abstractsymbols.OutputChecker;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.config.MapperConfig;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 
 public class TCPMapper
     implements Mapper<TCPInput, TCPOutput, TCPExecutionContext> {

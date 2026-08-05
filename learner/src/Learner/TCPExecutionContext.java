@@ -1,6 +1,6 @@
 package Learner;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
 import java.util.ArrayList;
 
 public class TCPExecutionContext

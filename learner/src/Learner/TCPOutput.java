@@ -1,6 +1,6 @@
 package Learner;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.abstractsymbols.AbstractOutput;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.abstractsymbols.AbstractOutput;
 
 public class TCPOutput extends AbstractOutput<TCPOutput, String> {
 

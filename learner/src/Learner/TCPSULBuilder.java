@@ -2,13 +2,13 @@ package Learner;
 
 import java.io.IOException;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSUL;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULBuilder;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapper;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapperStandard;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULConfig;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
-import com.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.AbstractSUL;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULBuilder;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapper;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.SULWrapperStandard;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULConfig;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.mapper.context.ExecutionContext;
+import io.github.protocolfuzzing.protocolstatefuzzer.utils.CleanupTasks;
 
 public class TCPSULBuilder
     implements

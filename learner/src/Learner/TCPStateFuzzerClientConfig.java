@@ -1,10 +1,10 @@
 package Learner;
 
-import com.github.protocolfuzzing.protocolstatefuzzer.components.learner.config.LearnerConfigStandard;
-import com.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULClientConfig;
-import com.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.core.config.StateFuzzerClientConfigStandard;
-import com.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.testrunner.core.config.TestRunnerConfigStandard;
-import com.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.testrunner.timingprobe.config.TimingProbeConfigStandard;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.learner.config.LearnerConfigStandard;
+import io.github.protocolfuzzing.protocolstatefuzzer.components.sul.core.config.SULClientConfig;
+import io.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.core.config.StateFuzzerClientConfigStandard;
+import io.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.testrunner.core.config.TestRunnerConfigStandard;
+import io.github.protocolfuzzing.protocolstatefuzzer.statefuzzer.testrunner.timingprobe.config.TimingProbeConfigStandard;
 
 public class TCPStateFuzzerClientConfig
     extends StateFuzzerClientConfigStandard {
