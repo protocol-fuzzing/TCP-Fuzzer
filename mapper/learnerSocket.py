@@ -202,6 +202,7 @@ class LearnerSocket:
 
         if type(response) is not Timeout:
             response_flags = self.sender.intToFlags(int(response['TCP'].flags))
+            dpi_rule = getattr(self.sender, 'last_dpi_rule', None) or ''
             # If not use .load to extract the payload, we get the raw bytes of the whole packet 
             # (which contains extra zeros for padding) instead of just the payload, which is not what we want.
             response_payload = response[Raw].load if response.haslayer(Raw) else b''
@@ -212,7 +213,7 @@ class LearnerSocket:
                 print('<- receive: ' + response_flags + " " + str(response.seq) + " " + 
                       str(response.ack) + "\n")
             self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + response_flags + 
-                            "," + response_payload.hex())
+                            "," + response_payload.hex() + "," + dpi_rule)
         else:
             print("received timeout \n")
             self.sendOutput("timeout")

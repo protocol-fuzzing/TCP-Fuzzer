@@ -173,7 +173,6 @@ public class TCPMapperSUL
                 if (outputFlags.contains("S") || outputFlags.contains("F")) {
                     ackIncrement += 1;
                 }
-
                 context.getState().setAck(Long.parseLong(outputSeq) + ackIncrement);
             }
 

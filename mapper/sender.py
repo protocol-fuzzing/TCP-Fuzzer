@@ -8,6 +8,8 @@ import random
 seqVar = 0
 ackVar = 0
 
+dpi_alerts_file = "/var/log/snort/alert_fast.txt"
+
 class Sender:
     """This class contains functions for creating and sending TCP packets. It communicates with the learner via the learnerSocket class"""
 
@@ -38,10 +40,15 @@ class Sender:
         # track the last seq/ack received from the server, used during reset to send a valid RST
         self.lastRecvSeq = 0
         self.lastRecvAck = 0
+        self.last_dpi_message = None
+        self.last_dpi_rule = None
 
         # Tracks seen packets (by seq/ack/flags) across all sr() calls within one test,
         # cleared on reset so duplicates/retransmissions within a test are filtered out.
         self.response_history = set()
+
+        # start with a clean DPI alert file for each mapper run
+        self.clearDPIAlertFile(dpi_alerts_file)
 
 
     def __str__(self):
@@ -88,7 +95,7 @@ class Sender:
 
     def setSenderPort(self, newPort):
         self.senderPort = newPort
-
+ 
     # function that creates packet from data strings/integers
     def createPacket(self, tcpFlagsSet, seqNr, ackNr, payload, destIP = None, destPort = None, srcPort = None, ipFlagsSet="DF"):
         """Creates a packet from the given arguments"""
@@ -124,11 +131,12 @@ class Sender:
 
         if packet is not None:
             self.clientIP = packet[IP].src
+            dpi_marker = self.DPI_monitor(dpi_alerts_file, 'before')
 
             # Used sr instead of sr1 to capture multiple responses 
             # e.g. the Ubuntu server in response to FA, sometimes sends 
             # two separate packets, one with 'A' flag and one with 'FA' flag, 
-            # instead of one packet with 'FA' flag.
+            # instead of one packet with 'FA' flag.0
             answered, unanswered = sr(packet, timeout=waitTime, verbose=self.isVerbose, multi=True)
             responses = [rcv for snd, rcv in answered]
 
@@ -160,11 +168,20 @@ class Sender:
                     self.response_history.add(key)
                     unique_responses.append(resp)
             responses = unique_responses
+            # time.sleep(1.0)
+
+            dpi_message = self.DPI_monitor(dpi_alerts_file, 'after', marker=dpi_marker)
+            self.last_dpi_message = dpi_message
+            dpi_rule = ''
+            # print(f'*** DPI alert message: {dpi_message} ***')
+            if dpi_message is not None and dpi_message == "Mapper send Data":
+                dpi_rule = "RuleMatched"
+            self.last_dpi_rule = dpi_rule if dpi_rule else None
 
             if len(responses) == 0:
                 return Timeout()
             elif len(responses) == 1:
-                response = responses[0]
+                response = responses[0] 
                 return response
             else: #len (responses) > 1: multiple replies
                 base_seq = responses[0]['TCP'].seq
@@ -203,7 +220,42 @@ class Sender:
         merged_str = self.intToFlags(merged_flags)
         print(f'*** Merging responses:  {flag_strs} -> {merged_str} ***')
         return merged
+
+    def clearDPIAlertFile(self, filename):
+        """Clear the DPI alert file at mapper startup."""
+        try:
+            with open(filename, 'w'):
+                pass
+            print("Cleared DPI alert file: " + filename)
+        except (PermissionError, OSError) as e:
+            print("Warning: could not clear DPI alert file '" + filename + "': " + str(e))
     
+    def DPI_monitor(self, filename, phase, marker=None):
+        """Read DPI alert file. 
+        phase 'before': mark last line count.
+        phase 'after': check if new alert added since marker, return message or None."""
+        try:
+            with open(filename, 'r') as f:
+                lines = f.readlines()
+            if phase == 'before':
+                return len(lines)
+            elif phase == 'after':
+                if marker is None:
+                    return None
+                new_lines = lines[marker:]
+                if new_lines:
+                    for line in new_lines:
+                        match = re.search(r'\[\*\*\]\s*\[[^\]]+\]\s*"([^"]+)"\s*\[\*\*\]', line)
+                        if match:
+                            message = match.group(1)
+                            print(message)
+                            return message
+                    print("new_lines[-1].strip() " + new_lines[-1].strip())
+                    return new_lines[-1].strip()
+                return None
+        except FileNotFoundError:
+            return None
+            
     
     # FIXME possibly refactor response.py a bit, the names are confusing
     def scapyResponseParse(self, scapyResponse):
