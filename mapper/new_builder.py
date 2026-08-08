@@ -19,7 +19,24 @@ class Builder(object):
     
     def buildSender(self):
         """Builds TCP packet sender"""
-        return Sender(serverIP=self.config['SUT']['ip'], serverPort=self.config['SUT']['port'], waitTime=self.config['SUT']['waittime'])
+        dpi_config = self.config.get("DPI", {})
+        dpi_enabled = dpi_config.get("enabled", False)
+
+        dpi_alerts_file = None
+        dpi_wait_time = 0.05
+
+        if dpi_enabled:
+            dpi_alerts_file = dpi_config.get("alerts_file", "/var/log/snort/alert_fast.txt",)
+
+            dpi_wait_time = dpi_config.get("waittime", 0.05,)
+
+        return Sender(
+            serverIP=self.config["SUT"]["ip"],
+            serverPort=self.config["SUT"]["port"],
+            waitTime=self.config["SUT"]["waittime"],
+            dpiAlertsFile=dpi_alerts_file,
+            dpiWaitTime=dpi_wait_time,
+        )
     
     # builds the actionSender as a wrapper over the original sender component
     def buildSUTSocket(self, sender):

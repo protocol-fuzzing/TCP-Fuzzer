@@ -5,7 +5,7 @@ from select import select
 import time
 import sys
 import signal
-from scapy.all import Raw
+from scapy.all import Raw, TCP
 from response import Timeout
 
 
@@ -200,23 +200,32 @@ class LearnerSocket:
         else:
             self.fault("invalid input " + input)
 
-        if type(response) is not Timeout:
-            response_flags = self.sender.intToFlags(int(response['TCP'].flags))
-            dpi_rule = getattr(self.sender, 'last_dpi_rule', None) or ''
-            # If not use .load to extract the payload, we get the raw bytes of the whole packet 
-            # (which contains extra zeros for padding) instead of just the payload, which is not what we want.
-            response_payload = response[Raw].load if response.haslayer(Raw) else b''
+        # Get the DPI observation before checking for a timeout.
+        # This allows us to report a DPI match even when the server
+        # does not send a TCP response.
+        dpi_rule = (getattr(self.sender, 'last_dpi_rule', None) or "")
+
+        if not isinstance(response, Timeout):
+            response_flags = self.sender.intToFlags(int (response["TCP"].flags))
+            response_payload = response[Raw].load if response.haslayer(Raw) else b""
+
             if response_payload:
                 print('<- receive: ' + response_flags + " " + str(response.seq) + " " +
                        str(response.ack) + " payload: " + response_payload.decode('latin-1') + "\n")
             else:
                 print('<- receive: ' + response_flags + " " + str(response.seq) + " " + 
                       str(response.ack) + "\n")
+                
             self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + response_flags + 
                             "," + response_payload.hex() + "," + dpi_rule)
         else:
             print("received timeout \n")
-            self.sendOutput("timeout")
+
+            if dpi_rule:
+                self.sendOutput("timeout," + dpi_rule)
+            else:
+                self.sendOutput("timeout")
+
 
     def sendOutput(self, outputString):
         """Sends a string to the learner, adds a newline as a delimiter"""

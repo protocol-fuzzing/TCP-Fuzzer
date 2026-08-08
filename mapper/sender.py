@@ -3,12 +3,12 @@ from response import Timeout, ConcreteResponse
 import re
 import time
 import random
+import os 
 
 # variables used to retain last sequence/acknowledgment sent
 seqVar = 0
 ackVar = 0
 
-dpi_alerts_file = "/var/log/snort/alert_fast.txt"
 
 class Sender:
     """This class contains functions for creating and sending TCP packets. It communicates with the learner via the learnerSocket class"""
@@ -16,7 +16,7 @@ class Sender:
     def __init__(self, serverMAC=None, serverIP="191.168.10.1", serverPort = 7991,
              networkInterface="lo", networkInterfaceType=0, senderPort=15000, senderPortMinimum=20000,
              senderPortMaximum=40000, portNumberFile = "sn.txt",
-             isVerbose=0, waitTime=0.1, resetMechanism=0): # increased default waitTime of server to 0.1 to capture multiple responses (sr)
+             isVerbose=0, waitTime=0.1, resetMechanism=0, dpiAlertsFile=None, dpiWaitTime=0.05,): # increased default waitTime of server to 0.1 to capture multiple responses (sr)
         # data on sender and server needed to send packets
         self.serverIP = serverIP
         self.serverPort = serverPort
@@ -40,15 +40,21 @@ class Sender:
         # track the last seq/ack received from the server, used during reset to send a valid RST
         self.lastRecvSeq = 0
         self.lastRecvAck = 0
-        self.last_dpi_message = None
-        self.last_dpi_rule = None
+        
 
         # Tracks seen packets (by seq/ack/flags) across all sr() calls within one test,
         # cleared on reset so duplicates/retransmissions within a test are filtered out.
         self.response_history = set()
 
-        # start with a clean DPI alert file for each mapper run
-        self.clearDPIAlertFile(dpi_alerts_file)
+        # DPI monitoring 
+        self.dpiAlertsFile = dpiAlertsFile
+        self.dpiWaitTime = dpiWaitTime
+        self.last_dpi_rule = None
+
+        if self.dpiAlertsFile is not None:
+            self.checkDpiConfiguration()
+
+       
 
 
     def __str__(self):
@@ -129,9 +135,14 @@ class Sender:
         if waitTime is None:
             waitTime = self.waitTime
 
+        # Never reuse a match from the previous packet.
+        self.last_dpi_rule = None
+
         if packet is not None:
             self.clientIP = packet[IP].src
-            dpi_marker = self.DPI_monitor(dpi_alerts_file, 'before')
+            # Remember where the Snort log ends before sending.
+            dpi_marker = self.getDpiMarker()
+            
 
             # Used sr instead of sr1 to capture multiple responses 
             # e.g. the Ubuntu server in response to FA, sometimes sends 
@@ -170,13 +181,10 @@ class Sender:
             responses = unique_responses
             # time.sleep(1.0)
 
-            dpi_message = self.DPI_monitor(dpi_alerts_file, 'after', marker=dpi_marker)
-            self.last_dpi_message = dpi_message
-            dpi_rule = ''
-            # print(f'*** DPI alert message: {dpi_message} ***')
-            if dpi_message is not None and dpi_message == "Mapper send Data":
-                dpi_rule = "RuleMatched"
-            self.last_dpi_rule = dpi_rule if dpi_rule else None
+            if self.checkForDpiAlert(dpi_marker):
+                self.last_dpi_rule = "RuleMatched"
+
+                print("*** DPI detected the packet payload: " + self.last_dpi_rule + " ***")
 
             if len(responses) == 0:
                 return Timeout()
@@ -221,42 +229,59 @@ class Sender:
         print(f'*** Merging responses:  {flag_strs} -> {merged_str} ***')
         return merged
 
-    def clearDPIAlertFile(self, filename):
-        """Clear the DPI alert file at mapper startup."""
+    def checkDpiConfiguration(self):
+        """Check that the Snort alert file can be read."""
+        if not os.path.isfile(self.dpiAlertsFile):
+            raise RuntimeError(f"DPI is enabled, but the Snort alert file: {self.dpiAlertsFile} does not exist.")
         try:
-            with open(filename, 'w'):
+            with open(self.dpiAlertsFile, 'r'):
                 pass
-            print("Cleared DPI alert file: " + filename)
-        except (PermissionError, OSError) as e:
-            print("Warning: could not clear DPI alert file '" + filename + "': " + str(e))
-    
-    def DPI_monitor(self, filename, phase, marker=None):
-        """Read DPI alert file. 
-        phase 'before': mark last line count.
-        phase 'after': check if new alert added since marker, return message or None."""
-        try:
-            with open(filename, 'r') as f:
-                lines = f.readlines()
-            if phase == 'before':
-                return len(lines)
-            elif phase == 'after':
-                if marker is None:
-                    return None
-                new_lines = lines[marker:]
-                if new_lines:
-                    for line in new_lines:
-                        match = re.search(r'\[\*\*\]\s*\[[^\]]+\]\s*"([^"]+)"\s*\[\*\*\]', line)
-                        if match:
-                            message = match.group(1)
-                            print(message)
-                            return message
-                    print("new_lines[-1].strip() " + new_lines[-1].strip())
-                    return new_lines[-1].strip()
-                return None
-        except FileNotFoundError:
+        except PermissionError:
+            raise RuntimeError(f"DPI is enabled, but the Snort alert file: {self.dpiAlertsFile} cannot be read. Check permissions.")
+
+    def getDpiMarker(self):
+        """
+        Return the current size of the alert file.
+
+        New alerts written after this position belong to the packet
+        we are about to send.
+        """
+
+        if self.dpiAlertsFile is None:
             return None
-            
-    
+        try:
+            return os.path.getsize(self.dpiAlertsFile)
+        except OSError as error:
+            raise RuntimeError(f"Failed to get size of DPI alert file: {self.dpiAlertsFile}. Error: {error}")
+
+    def checkForDpiAlert(self, marker):
+        """
+        Check whether Snort wrote a matching alert after the marker.
+        """
+        if self.dpiAlertsFile is None or marker is None:
+            return False
+
+        # Snort may write the alert asynchronously, so we wait a bit before reading the file.
+        time.sleep(self.dpiWaitTime)
+
+        try:
+            current_size = os.path.getsize(self.dpiAlertsFile)
+
+            # Handle a file that was cleared.
+            if current_size < marker:
+                marker = 0
+
+            with open(self.dpiAlertsFile, 'r', encoding='utf-8', errors="replace") as alert_file:
+                alert_file.seek(marker)
+                new_alerts = alert_file.read()
+
+        except OSError as error:
+            raise RuntimeError(f"Failed to read DPI alert file: {self.dpiAlertsFile}. Error: {error}")
+
+        # This is intentionally simple because there is currently one rule.
+        return "Mapper send Data" in new_alerts
+
+
     # FIXME possibly refactor response.py a bit, the names are confusing
     def scapyResponseParse(self, scapyResponse):
         """Extracts the relevant TCP data from the scapy response"""

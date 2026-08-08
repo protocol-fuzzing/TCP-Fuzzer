@@ -139,8 +139,8 @@ public class TCPMapperSUL
             output = socketSul.sendAndRecv(inputPayload); // without 'P' flag, payload is empty.
         }
 
-         if (output.equals("timeout")) {
-            return new TCPOutput("timeout");
+        if (output.equals("timeout") || output.startsWith("timeout")) {
+            return new TCPOutput(output);
         } else {
             // Split the returned packet (it has format "seq,ack,flags,payloadHex,dpiRule").
             String[] split = output.split(",", 5);
@@ -176,13 +176,13 @@ public class TCPMapperSUL
                 context.getState().setAck(Long.parseLong(outputSeq) + ackIncrement);
             }
 
-            String outputFlagsandDpiRule = outputFlags;
+            String outputFlagsAndDpiRule = outputFlags;
             if (outputDpiRule != null && !outputDpiRule.isEmpty()) {
-                outputFlagsandDpiRule = outputFlags + "," + outputDpiRule;
+                outputFlagsAndDpiRule = outputFlags + "," + outputDpiRule;
             }
 
             return new TCPOutput(
-                outputFlagsandDpiRule,
+                outputFlagsAndDpiRule,
                 Long.parseLong(outputSeq),
                 Long.parseLong(outputAck)
             );
