@@ -3,12 +3,11 @@ ip = "0.0.0.0"
 port = 18200
 
 [SUT]
-# Set the SUT IP 
-ip = ""
+ip = "localhost"
 port = 9000
 waittime = 1
 
 [DPI]
-enabled = true
+enabled = false
 alerts_file = "/var/log/snort/alert_fast.txt"
 waittime = 0.05
