@@ -9,24 +9,50 @@ class TOMLParser:
     
 
     schema = {
-        "type" : "object",
-        "properties" : {
+        "type": "object",
+        "properties": {
             "Learner": {
-                "type" : "object",
+                "type": "object",
                 "properties": {
                     "ip": {"type": "string"},
                     "port": {"type": "integer"}
-                }
+                },
+                "required": ["ip", "port"],
+                "additionalProperties": False
             },
             "SUT": {
-                "type" : "object",
+                "type": "object",
                 "properties": {
                     "ip": {"type": "string"},
                     "port": {"type": "integer"},
                     "waittime": {"type": "number"}
-                }
+                },
+                "required": ["ip", "port", "waittime"],
+                "additionalProperties": False
+            },
+            "DPI": {
+                "type": "object",
+                "properties": {
+                    "enabled": {"type": "boolean"},
+                    "alerts_file": {"type": "string", "minLength": 1},
+                    "waittime": {"type": "number", "minimum": 0}
+                },
+                "required": ["enabled"],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "enabled": {"const": True}
+                            }
+                        },
+                        "then": {
+                            "required": ["alerts_file"]
+                        }
+                    }
+                ],
+                "additionalProperties": False
             }
-        },
+        }
     }
 
 
