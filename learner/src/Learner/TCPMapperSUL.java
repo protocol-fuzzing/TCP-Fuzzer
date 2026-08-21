@@ -129,14 +129,11 @@ public class TCPMapperSUL
         if (in.getName().equals("reset")) {
             output = socketSul.sendAndRecv(in.getName());
         } else {
-            String inputPayload = "";
-            if (in.getName().contains("P")){
-                inputPayload = "x" ;
-            }
-            socketSul.send(in.getName());
+            String inputPayload = in.getPayload();
+            socketSul.send(in.getFlags());
             socketSul.send(String.valueOf(in.getSeq()));
             socketSul.send(String.valueOf(in.getAck()));
-            output = socketSul.sendAndRecv(inputPayload); // without 'P' flag, payload is empty.
+            output = socketSul.sendAndRecv(inputPayload); // An empty string means this input has no payload.
         }
 
         if (output.equals("timeout") || output.startsWith("timeout")) {
@@ -150,39 +147,46 @@ public class TCPMapperSUL
             String outputPayloadHex = split.length > 3 ? split[3] : "";
             String outputDpiRule = split.length > 4 ? split[4] : "";
 
+            int outputPayloadSize = 0;
+
+            if (outputPayloadHex != null && !outputPayloadHex.isEmpty()) {
+                // Every byte is represented by two hexadecimal characters.
+                outputPayloadSize = outputPayloadHex.length() / 2;
+            }
+
             if (outputFlags.contains("R")) {
-                // If reset is recevied we reset sequence and acknowledgement numbers.                
+                // Reset sequence and acknowledgment state after receiving RST.
                 startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
                 context.getState().setSeq(startSeq);
                 context.getState().setAck(startSeq + 1);
             } else {
-                // We update the seq number to the output's ack number 
-                // regardless if the output contains a 'A' flag.
+                // The response ACK becomes our next sequence number.
                 context.getState().setSeq(Long.parseLong(outputAck));
 
-                int ackIncrement = 0; 
-                int payloadLength = 0;
+                // Payload bytes consume TCP sequence numbers.
+                int ackIncrement = outputPayloadSize;
 
-                // If the output contains a payload (indicated by the presence of 'P' flag), we increment the ack number by the payload length.
-                if (outputPayloadHex != null && !outputPayloadHex.isEmpty() && outputFlags.contains("P")) {
-                    payloadLength = outputPayloadHex.length() / 2; // Each byte is represented by 2 hex characters.
-                    ackIncrement += payloadLength;
-                }
-                
-                // If the output contains a 'S' or 'F' flag, we increment the ack number.
+                // SYN and FIN each consume one TCP sequence number.
                 if (outputFlags.contains("S") || outputFlags.contains("F")) {
                     ackIncrement += 1;
                 }
+
                 context.getState().setAck(Long.parseLong(outputSeq) + ackIncrement);
             }
 
-            String outputFlagsAndDpiRule = outputFlags;
+            // Construct the label that will appear in the learned model.
+            String outputLabel = outputFlags;
+
+            if (outputPayloadSize > 0) {
+                outputLabel += "_DATA_" + outputPayloadSize;
+            }
+
             if (outputDpiRule != null && !outputDpiRule.isEmpty()) {
-                outputFlagsAndDpiRule = outputFlags + "," + outputDpiRule;
+                outputLabel += "," + outputDpiRule;
             }
 
             return new TCPOutput(
-                outputFlagsAndDpiRule,
+                outputLabel,
                 Long.parseLong(outputSeq),
                 Long.parseLong(outputAck)
             );

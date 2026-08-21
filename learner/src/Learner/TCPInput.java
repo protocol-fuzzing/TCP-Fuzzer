@@ -14,9 +14,21 @@ public class TCPInput
 
     private long seq;
     private long ack;
+    private final String flags;
+    private final int payloadSize;
+    private final String payloadPattern;
 
-    public TCPInput(String name) {
+    public TCPInput(String name, String flags, int payloadSize, String payloadPattern) {
         super(name);
+        if (payloadSize < 0) {
+            throw new IllegalArgumentException("Payload size cannot be negative.");
+        }
+        if (payloadPattern == null || payloadPattern.isEmpty()) {
+            throw new IllegalArgumentException("Payload pattern cannot be empty.");
+        }
+        this.flags = flags;
+        this.payloadSize = payloadSize;
+        this.payloadPattern = payloadPattern;
     }
 
     public long getSeq() {
@@ -33,6 +45,25 @@ public class TCPInput
 
     public void setAck(long ack) {
         this.ack = ack;
+    }
+
+    public String getFlags() {
+        return this.flags;
+    }
+
+    public int getPayloadSize() {
+        return this.payloadSize;
+    }
+
+    public boolean hasPayload() {
+        return this.payloadSize > 0;
+    }
+
+    public String getPayload() {
+        if (!hasPayload()) {
+            return "";
+        }
+        return payloadPattern.repeat(payloadSize);
     }
 
     @Override
@@ -66,12 +97,8 @@ public class TCPInput
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public String toString() {
-        // Display P and PA with a data label in dot outputs.
-        if (this.name.equals("P") || this.name.equals("PA")) {
-            return this.name + "+data";
+        @Override
+        public String toString() {
+            return this.name;
         }
-        return this.name;
     }
-}
