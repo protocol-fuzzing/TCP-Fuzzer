@@ -93,7 +93,7 @@ class LearnerSocket:
         while not finished:
             if not self.data:
                 try:
-                    ready = select([self.learnerSocket], [], [], 1000)
+                    ready = select([self.learnerSocket], [], [], 1000) 
                     if ready[0]:
                         self.data = self.learnerSocket.recv(1024)
                         if len(self.data) == 0:
@@ -171,7 +171,6 @@ class LearnerSocket:
                     self.parseInput(input)
 
 
-
     def parseInput(self, input):
         """Parses the input string and takes the corresponding action"""
 
@@ -206,7 +205,12 @@ class LearnerSocket:
         dpi_rule = (getattr(self.sender, 'last_dpi_rule', None) or "")
 
         if not isinstance(response, Timeout):
-            response_flags = self.sender.intToFlags(int (response["TCP"].flags))
+            # response_flags = self.sender.intToFlags(int (response["TCP"].flags))
+            if self.sender.response_flag_sequence is not None:
+                response_flags = self.sender.response_flag_sequence
+            else:
+                response_flags = self.sender.intToFlags(int(response[TCP].flags))
+                
             response_payload = response[Raw].load if response.haslayer(Raw) else b""
 
             if response_payload:

@@ -46,6 +46,10 @@ class Sender:
         # cleared on reset so duplicates/retransmissions within a test are filtered out.
         self.response_history = set()
 
+        # Composite label when one input produces multiple responses.
+        # Example: "PA_DATA_1|FA"
+        self.response_flag_sequence = None
+
         # DPI monitoring 
         self.dpiAlertsFile = dpiAlertsFile
         self.dpiWaitTime = dpiWaitTime
@@ -135,6 +139,9 @@ class Sender:
         if waitTime is None:
             waitTime = self.waitTime
 
+        # Never reuse a response sequence from previous packet.
+        self.response_flag_sequence = None
+
         # Never reuse a match from the previous packet.
         self.last_dpi_rule = None
 
@@ -143,7 +150,6 @@ class Sender:
             # Remember where the Snort log ends before sending.
             dpi_marker = self.getDpiMarker()
             
-
             # Used sr instead of sr1 to capture multiple responses 
             # e.g. the Ubuntu server in response to FA, sometimes sends 
             # two separate packets, one with 'A' flag and one with 'FA' flag, 
@@ -190,21 +196,109 @@ class Sender:
                 return Timeout()
             elif len(responses) == 1:
                 response = responses[0] 
+                label = self.intToFlags(int(response[TCP].flags))
+                if response.haslayer(Raw):
+                    payload_length = len(bytes(response[Raw].load))
+                    if payload_length > 0:
+                        label += f"_DATA_{payload_length}"
+                self.response_flag_sequence = label
                 return response
-            else: #len (responses) > 1: multiple replies
-                base_seq = responses[0]['TCP'].seq
-                base_ack = responses[0]['TCP'].ack
+            else:  # len(responses) > 1: multiple replies
+                for response in responses:
+                    flag_str = self.intToFlags(int(response[TCP].flags))
+                    seq_ack_str = f"{flag_str} {response[TCP].seq} {response[TCP].ack}"
+                    if response.haslayer(Raw):
+                        payload_bytes = bytes(response[Raw].load)
+                        if payload_bytes:
+                            seq_ack_str += f", payload={payload_bytes.decode('utf-8', errors='replace')}"
+                    print(f"*** Response: {seq_ack_str} ***")
 
-                # if all responses share the same seq and ack numbers,merge them into one response with combined flags.
-                if all(pkt['TCP'].seq == base_seq and pkt['TCP'].ack == base_ack for pkt in responses):
-                    merged_responses = self.merge_responses(responses)
-                else:
-                    # TODO: Handle the case where responses have different seq/ack numbers.
-                    # This can happen if the server sends multiple distinct packets (e.g., A then FA
-                    # with incremented seq). For now, fall back to the packet with the highest seq.
-                    print('Bug: multiple responses with different seq/ack — falling back to highest seq packet')
-                    merged_responses = max(responses, key=lambda pkt: pkt['TCP'].seq)
-                return merged_responses
+                # First merge consecutive responses that describe the same
+                # TCP sequence position. For example, A followed by FA with
+                # identical seq/ack values becomes one FA response.
+                response_groups = []
+                for response in responses:
+                    response_key = (
+                        int(response[TCP].seq),
+                        int(response[TCP].ack),
+                    )
+
+                    if response_groups and response_groups[-1][0] == response_key:
+                        response_groups[-1][1].append(response)
+                    else:
+                        response_groups.append((response_key, [response]))
+
+                normalized_responses = []
+                for _, response_group in response_groups:
+                    if len(response_group) == 1:
+                        normalized_responses.append(response_group[0])
+                    else:
+                        normalized_responses.append(
+                            self.merge_responses(response_group)
+                        )
+
+                consecutive_responses = [normalized_responses[0]]
+
+                for response in normalized_responses[1:]:
+                    previous = consecutive_responses[-1]
+
+                    previous_flags = int(previous[TCP].flags)
+
+                    consumed = (
+                        len(bytes(previous[Raw].load))
+                        if previous.haslayer(Raw)
+                        else 0
+                    )
+
+                    if previous_flags & 0x02:  # SYN
+                        consumed += 1
+
+                    if previous_flags & 0x01:  # FIN
+                        consumed += 1
+
+                    expected_seq = (
+                        int(previous[TCP].seq) + consumed
+                    ) & 0xFFFFFFFF
+
+                    if int(response[TCP].seq) == expected_seq:
+                        consecutive_responses.append(response)
+                    else:
+                        print(
+                            "*** Ignoring non-consecutive response: "
+                            f"{self.intToFlags(int(response[TCP].flags))} "
+                            f"seq={response[TCP].seq}, "
+                            f"expected={expected_seq} ***"
+                        )
+
+                normalized_responses = consecutive_responses
+
+                # Responses at different sequence positions remain separate
+                # ordered outputs, represented with the | separator.
+                response_labels = []
+                for response in normalized_responses:
+                    label = self.intToFlags(int(response[TCP].flags))
+
+                    if response.haslayer(Raw):
+                        payload_length = len(bytes(response[Raw].load))
+                        if payload_length > 0:
+                            label += f"_DATA_{payload_length}"
+
+                    response_labels.append(label)
+
+                self.response_flag_sequence = "|".join(response_labels)
+
+                # Preserve seq, ack, and payload from the final normalized
+                # response for the learner's TCP context.
+                last_response = normalized_responses[-1]
+
+                print(
+                    f"*** Normalized responses: "
+                    f"{self.response_flag_sequence}; "
+                    f"using final seq={last_response[TCP].seq}, "
+                    f"ack={last_response[TCP].ack} ***"
+                )
+
+                return last_response
 
     # Merges multiple responses into one Scapy packet by OR-ing all TCP flags.
     # All responses must share the same seq and ack numbers (checked by the caller).
@@ -227,6 +321,153 @@ class Sender:
         flag_strs = ', '.join(self.intToFlags(int(f)) for f in pktFlags)
         merged_str = self.intToFlags(merged_flags)
         print(f'*** Merging responses:  {flag_strs} -> {merged_str} ***')
+        return merged
+
+    @staticmethod
+    def tcp_seq_before(left, right):
+        """
+        Return True when left is before right in TCP's 32-bit
+        sequence-number space.
+
+        This comparison is valid when the compared sequence numbers
+        are less than 2**31 positions apart.
+        """
+        difference = (int(right) - int(left)) & 0xFFFFFFFF
+        return 0 < difference < 0x80000000
+
+
+    def merge_contiguous_responses(self, responses):
+    
+        if not responses:
+            return None
+
+        mask = 0xFFFFFFFF
+
+        # Combining these flags could change their meaning.
+        unsafe_flags = 0x04 | 0x20 | 0x40 | 0x80  # RST, URG, ECE, CWR
+
+        for packet in responses:
+            if int(packet[TCP].flags) & unsafe_flags:
+                return None
+
+        # Find the earliest TCP sequence number.
+        start_seq = int(responses[0][TCP].seq)
+
+        for packet in responses[1:]:
+            packet_seq = int(packet[TCP].seq)
+
+            if self.tcp_seq_before(packet_seq, start_seq):
+                start_seq = packet_seq
+
+        # Put the responses in TCP sequence order.
+        ordered = sorted(
+            responses,
+            key=lambda packet: (
+                int(packet[TCP].seq) - start_seq
+            ) & mask
+        )
+
+        merged_flags = 0
+        payload_parts = []
+        next_seq = start_seq
+        fin_seen = False
+        syn_seen = False
+
+        for packet in ordered:
+            flags = int(packet[TCP].flags)
+            packet_seq = int(packet[TCP].seq)
+
+            payload = (
+                bytes(packet[Raw].load)
+                if packet.haslayer(Raw)
+                else b""
+            )
+
+            has_syn = bool(flags & 0x02)
+            has_fin = bool(flags & 0x01)
+
+            merged_flags |= flags
+
+            # ACK-only packets consume no sequence numbers.
+            if not payload and not has_syn and not has_fin:
+                continue
+
+            # Payload/SYN/FIN packets must be consecutive.
+            if packet_seq != next_seq:
+                print(
+                    '*** Cannot merge responses: '
+                    f'expected seq={next_seq}, got seq={packet_seq} ***'
+                )
+                return None
+
+            # Do not accept data or another control after FIN.
+            if fin_seen:
+                return None
+
+            if has_syn:
+                if syn_seen or packet_seq != start_seq:
+                    return None
+
+                syn_seen = True
+
+            payload_parts.append(payload)
+
+            # Data bytes, SYN, and FIN consume sequence numbers.
+            consumed = len(payload)
+
+            if has_syn:
+                consumed += 1
+
+            if has_fin:
+                consumed += 1
+                fin_seen = True
+
+            next_seq = (next_seq + consumed) & mask
+
+        merged_payload = b"".join(payload_parts)
+
+        # Find the most advanced cumulative ACK.
+        ack_packets = [
+            packet
+            for packet in ordered
+            if int(packet[TCP].flags) & 0x10
+        ]
+
+        if ack_packets:
+            latest_ack = int(ack_packets[0][TCP].ack)
+
+            for packet in ack_packets[1:]:
+                packet_ack = int(packet[TCP].ack)
+
+                if self.tcp_seq_before(latest_ack, packet_ack):
+                    latest_ack = packet_ack
+        else:
+            latest_ack = int(ordered[0][TCP].ack)
+
+        # Start with a copy of the earliest response.
+        merged = ordered[0].copy()
+
+        merged[TCP].seq = start_seq
+        merged[TCP].ack = latest_ack
+        merged[TCP].flags = merged_flags
+
+        # Replace its payload with the complete collected payload.
+        merged[TCP].remove_payload()
+
+        if merged_payload:
+            merged[TCP].add_payload(Raw(load=merged_payload))
+
+        flag_names = ", ".join(
+            self.intToFlags(int(packet[TCP].flags))
+            for packet in ordered
+        )
+
+        print(
+            f'*** Merging responses: {flag_names} '
+            f'-> {self.intToFlags(merged_flags)}; '
+            f'payload length={len(merged_payload)} ***'
+        )
+
         return merged
 
     def checkDpiConfiguration(self):

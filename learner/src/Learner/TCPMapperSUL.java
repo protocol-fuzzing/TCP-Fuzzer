@@ -174,10 +174,20 @@ public class TCPMapperSUL
                 context.getState().setAck(Long.parseLong(outputSeq) + ackIncrement);
             }
 
-            // Construct the label that will appear in the learned model.
             String outputLabel = outputFlags;
 
-            if (outputPayloadSize > 0) {
+            // Check the final component of a composite output such as
+            // "A|PA_DATA_1".
+            String finalResponseLabel = outputFlags.substring(
+                outputFlags.lastIndexOf('|') + 1
+            );
+
+            // Keep compatibility with mapper outputs that do not already
+            // contain a payload annotation.
+            if (
+                outputPayloadSize > 0
+                && !finalResponseLabel.matches(".*_DATA_\\d+$")
+            ) {
                 outputLabel += "_DATA_" + outputPayloadSize;
             }
 
