@@ -47,7 +47,7 @@ class Sender:
         self.response_history = set()
 
         # Composite label when one input produces multiple responses.
-        # Example: "PA_DATA_1|FA"
+        # Example: "PA_ACK2_D1|FA_ACK2"
         self.response_flag_sequence = None
 
         # DPI monitoring 
@@ -196,12 +196,7 @@ class Sender:
                 return Timeout()
             elif len(responses) == 1:
                 response = responses[0] 
-                label = self.intToFlags(int(response[TCP].flags))
-                if response.haslayer(Raw):
-                    payload_length = len(bytes(response[Raw].load))
-                    if payload_length > 0:
-                        label += f"_DATA_{payload_length}"
-                self.response_flag_sequence = label
+                self.response_flag_sequence = self.build_ack_response_label(packet, response)
                 return response
             else:  # len(responses) > 1: multiple replies
                 for response in responses:
@@ -276,14 +271,7 @@ class Sender:
                 # ordered outputs, represented with the | separator.
                 response_labels = []
                 for response in normalized_responses:
-                    label = self.intToFlags(int(response[TCP].flags))
-
-                    if response.haslayer(Raw):
-                        payload_length = len(bytes(response[Raw].load))
-                        if payload_length > 0:
-                            label += f"_DATA_{payload_length}"
-
-                    response_labels.append(label)
+                    response_labels.append(self.build_ack_response_label(packet, response))
 
                 self.response_flag_sequence = "|".join(response_labels)
 
@@ -564,6 +552,50 @@ class Sender:
         if self.checkForFlag(x, 5):
             result = result + "U"
         return result
+
+    def build_ack_response_label(self, sent_packet, response):
+        """
+         'ACK1' means the server acknowledged either the flag (S or F) or the payload of length 1.
+         'ACK2' means the server acknowledged both the flag and the payload of length 1.
+         'D1' means the server sent a payload of length 1, echoing the payload sent by the client.
+        """
+        server_response_flags = int(response[TCP].flags)
+        response_label = self.intToFlags(server_response_flags) # like: A S SA ...
+        sent_packet_flags = int(sent_packet[TCP].flags)
+        sent_payload_length = len(bytes(sent_packet[TCP].payload))
+        sent_sequence_length = sent_payload_length
+
+        if sent_packet_flags & 0x02: # SYN
+            sent_sequence_length += 1
+        if sent_packet_flags & 0x01: # FIN
+            sent_sequence_length += 1
+
+  
+
+        # pure ACK packets consume no sequence space and RST packets are not acknowledged.
+        if(sent_sequence_length> 0 
+           and (sent_packet_flags & 0x04) == 0 # sent packet was not RST
+           and (server_response_flags & 0x10) != 0 # responce has ACK)
+        ):
+            sent_sequence_number = int(sent_packet[TCP].seq)
+            server_ack_number = int(response[TCP].ack)
+         
+
+            # the calculation also handles 32-bit TCP sequence wraparound.
+            ack_advance = (server_ack_number - sent_sequence_number) & 0xFFFFFFFF
+
+            if 0 < ack_advance < 0x80000000:
+                acknowledged_length = min (ack_advance, sent_sequence_length)
+                response_label += f"_ACK{acknowledged_length}"
+    
+
+        if response.haslayer(Raw):
+            response_payload_length = len(bytes(response[Raw].load))
+            if response_payload_length > 0:
+                response_label += f"_D{response_payload_length}"
+
+        return response_label
+
 
     def isFlags(self, inputString):
         """Checks if a given string is a valid TCP flag"""

@@ -186,9 +186,9 @@ public class TCPMapperSUL
             // contain a payload annotation.
             if (
                 outputPayloadSize > 0
-                && !finalResponseLabel.matches(".*_DATA_\\d+$")
+                && !finalResponseLabel.matches(".*_D\\d+$")
             ) {
-                outputLabel += "_DATA_" + outputPayloadSize;
+                outputLabel += "_D" + outputPayloadSize;
             }
 
             if (outputDpiRule != null && !outputDpiRule.isEmpty()) {
