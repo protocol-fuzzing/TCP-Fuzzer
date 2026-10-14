@@ -187,7 +187,7 @@ class Sender:
             responses = unique_responses
             # time.sleep(1.0)
 
-            if self.checkForDpiAlert(dpi_marker):
+            if self.checkForDpiAlert(dpi_marker, packet):
                 self.last_dpi_rule = "RuleMatched"
 
                 print("*** DPI detected the packet payload: " + self.last_dpi_rule + " ***")
@@ -280,7 +280,7 @@ class Sender:
                 last_response = normalized_responses[-1]
 
                 print(
-                    f"*** Normalized responses: "
+                    f"*** Final responses: "
                     f"{self.response_flag_sequence}; "
                     f"using final seq={last_response[TCP].seq}, "
                     f"ack={last_response[TCP].ack} ***"
@@ -483,12 +483,49 @@ class Sender:
         except OSError as error:
             raise RuntimeError(f"Failed to get size of DPI alert file: {self.dpiAlertsFile}. Error: {error}")
 
-    def checkForDpiAlert(self, marker):
+    def checkForDpiAlert(self, marker, packet):
         """
-        Check whether Snort wrote a matching alert after the marker.
+        Check for a Snort alert belonging to the TCP flow of packet.
         """
         if self.dpiAlertsFile is None or marker is None:
             return False
+
+        expected_source_port = int(packet[TCP].sport)
+        expected_dest_ip = str(packet[IP].dst)
+        expected_dest_port = int(packet[TCP].dport)
+
+        endpoint_pattern = re.compile(
+            rf'\{{TCP\}}\s+\S+:{expected_source_port}\s+->\s+'
+            rf'{re.escape(expected_dest_ip)}:'
+            rf'{expected_dest_port}(?:\s|$)'
+        )
+
+        deadline = time.monotonic() + self.dpiWaitTime
+
+        while True:
+            try:
+                current_size = os.path.getsize(self.dpiAlertsFile)
+                if current_size < marker:
+                    marker = 0
+
+                with open(self.dpiAlertsFile, 'r', encoding='utf-8', errors="replace") as alert_file:
+                    alert_file.seek(marker)
+                    new_alerts = alert_file.read()
+
+            except OSError as error:
+                raise RuntimeError(f"Failed to read DPI alert file: {self.dpiAlertsFile}. Error: {error}")
+
+            for line in new_alerts.splitlines():
+                dpi_alert = "Mapper send Data" in line 
+                correct_connection = endpoint_pattern.search(line) 
+                if dpi_alert and correct_connection:
+                    return True
+
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0:
+                return False
+
+            time.sleep(min(0.01, remaining_time))  # Sleep for a short interval before checking again
 
         # Snort may write the alert asynchronously, so we wait a bit before reading the file.
         time.sleep(self.dpiWaitTime)
@@ -570,8 +607,6 @@ class Sender:
         if sent_packet_flags & 0x01: # FIN
             sent_sequence_length += 1
 
-  
-
         # pure ACK packets consume no sequence space and RST packets are not acknowledged.
         if(sent_sequence_length> 0 
            and (sent_packet_flags & 0x04) == 0 # sent packet was not RST
@@ -580,7 +615,6 @@ class Sender:
             sent_sequence_number = int(sent_packet[TCP].seq)
             server_ack_number = int(response[TCP].ack)
          
-
             # the calculation also handles 32-bit TCP sequence wraparound.
             ack_advance = (server_ack_number - sent_sequence_number) & 0xFFFFFFFF
 
