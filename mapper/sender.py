@@ -25,6 +25,14 @@ class Sender:
         self.senderPort = senderPort
         self.senderPortMinimum = senderPortMinimum
         self.senderPortMaximum = senderPortMaximum
+        if not 1 <= self.senderPortMinimum <= self.senderPortMaximum <= 65535:
+            raise ValueError("Invalid Tcp source-port range")
+
+        self._unused_sender_ports = iter(
+            port for port in range(self.senderPortMinimum, self.senderPortMaximum + 1)
+            if port != self.senderPort
+        )
+                            
         self.portNumberFile = portNumberFile
 
         # time to wait for a response from the server before concluding a timeout
@@ -67,13 +75,19 @@ class Sender:
     # TODO the functions pertaining to refreshing ports seem a bit odd, they read from a file. Couldn't they just increment the number instead?
     # TODO I have changed this to select a port randomly, that could backfire if im unlucky enough to select a port which was very recently
     # used, causing nondeterminism. I haven't run into problems yet though.
+
     def refreshNetworkPort(self):
-        """Chooses a new port to send packets to"""
-        print("previous local port: " + str(self.senderPort))
-        #self.setSenderPort(self.getNextPort())
-        self.setSenderPort(random.randint(self.senderPortMinimum, self.senderPortMaximum))
-        print("next local port: " + str(self.senderPort)+"\n")
+        """Use each source port at most once. """
+        try:
+            next_port = next(self._unused_sender_ports)
+        except StopIteration:
+            raise RuntimeError("No more unused sender ports available.") from None
+
+        print(f"previous local port: {self.senderPort}")
+        self.setSenderPort(next_port)
+        print(f"next local port: {self.senderPort}\n")
         return self.senderPort
+                
 
     # TODO the functions pertaining to refreshing ports seem a bit odd, they read from a file. Couldn't they just increment the number instead?
     def getNextPort(self):
