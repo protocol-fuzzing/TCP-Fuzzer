@@ -100,10 +100,9 @@ public class TCPMapperSUL
     @Override
     public void pre() {
         socketSul.reset();
-        if(this.startSeq > Long.MAX_VALUE - 100000) {
-            this.startSeq = ThreadLocalRandom.current().nextLong(10000, 30000);
-        }
-        this.startSeq = this.startSeq + ThreadLocalRandom.current().nextInt(10000, 30000);
+        this.startSeq = (
+            this.startSeq + ThreadLocalRandom.current().nextInt(10000, 30000)
+        ) & 0xFFFFFFFFL; // wrap around to stay within 32-bit unsigned range
         this.context = new TCPExecutionContext(new TCPState(this.startSeq, 0));
     }
 
@@ -155,10 +154,11 @@ public class TCPMapperSUL
             }
 
             if (outputFlags.contains("R")) {
-                // Reset sequence and acknowledgment state after receiving RST.
-                startSeq += ThreadLocalRandom.current().nextInt(10000, 30000);
+                startSeq = (
+                    startSeq + ThreadLocalRandom.current().nextInt(10000, 30000)
+                ) & 0xFFFFFFFFL; 
                 context.getState().setSeq(startSeq);
-                context.getState().setAck(startSeq + 1);
+                context.getState().setAck((startSeq + 1) & 0xFFFFFFFF); 
             } else {
                 // The response ACK becomes our next sequence number.
                 context.getState().setSeq(Long.parseLong(outputAck));
@@ -171,7 +171,7 @@ public class TCPMapperSUL
                     ackIncrement += 1;
                 }
 
-                context.getState().setAck(Long.parseLong(outputSeq) + ackIncrement);
+                context.getState().setAck((Long.parseLong(outputSeq) + ackIncrement) & 0xFFFFFFFFL); 
             }
 
             String outputLabel = outputFlags;
