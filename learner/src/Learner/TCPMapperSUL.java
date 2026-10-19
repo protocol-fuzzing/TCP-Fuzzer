@@ -158,7 +158,7 @@ public class TCPMapperSUL
                     startSeq + ThreadLocalRandom.current().nextInt(10000, 30000)
                 ) & 0xFFFFFFFFL; 
                 context.getState().setSeq(startSeq);
-                context.getState().setAck((startSeq + 1) & 0xFFFFFFFF); 
+                context.getState().setAck((startSeq + 1) & 0xFFFFFFFFL); 
             } else {
                 // The response ACK becomes our next sequence number.
                 context.getState().setSeq(Long.parseLong(outputAck));
