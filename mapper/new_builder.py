@@ -30,10 +30,15 @@ class Builder(object):
 
             dpi_wait_time = dpi_config.get("waittime", 0.05,)
 
+        sut_config = self.config["SUT"]
+
         return Sender(
-            serverIP=self.config["SUT"]["ip"],
-            serverPort=self.config["SUT"]["port"],
-            waitTime=self.config["SUT"]["waittime"],
+            serverIP=sut_config["ip"],
+            serverPort=sut_config["port"],
+            waitTime=sut_config["waittime"],
+            senderPortMinimum=sut_config.get("sport_min", 1025),
+            senderPortMaximum=sut_config.get("sport_max", 65535),
+            portCooldown=sut_config.get("port_cooldown", 3600),
             dpiAlertsFile=dpi_alerts_file,
             dpiWaitTime=dpi_wait_time,
         )

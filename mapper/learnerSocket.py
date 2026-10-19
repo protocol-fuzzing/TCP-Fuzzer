@@ -93,7 +93,7 @@ class LearnerSocket:
         while not finished:
             if not self.data:
                 try:
-                    ready = select([self.learnerSocket], [], [], 1000) 
+                    ready = select([self.learnerSocket], [], [], 3000) 
                     if ready[0]:
                         self.data = self.learnerSocket.recv(1024)
                         if len(self.data) == 0:

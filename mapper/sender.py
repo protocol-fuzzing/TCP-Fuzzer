@@ -4,6 +4,7 @@ import re
 import time
 import random
 import os 
+from collections import deque
 
 # variables used to retain last sequence/acknowledgment sent
 seqVar = 0
@@ -14,8 +15,8 @@ class Sender:
     """This class contains functions for creating and sending TCP packets. It communicates with the learner via the learnerSocket class"""
 
     def __init__(self, serverMAC=None, serverIP="191.168.10.1", serverPort = 7991,
-             networkInterface="lo", networkInterfaceType=0, senderPort=15000, senderPortMinimum=20000,
-             senderPortMaximum=40000, portNumberFile = "sn.txt",
+             networkInterface="lo", networkInterfaceType=0, senderPort=15000, senderPortMinimum=1025,
+             senderPortMaximum=65535, portCooldown=3600,
              isVerbose=0, waitTime=0.1, resetMechanism=0, dpiAlertsFile=None, dpiWaitTime=0.05,): # increased default waitTime of server to 0.1 to capture multiple responses (sr)
         # data on sender and server needed to send packets
         self.serverIP = serverIP
@@ -28,12 +29,14 @@ class Sender:
         if not 1 <= self.senderPortMinimum <= self.senderPortMaximum <= 65535:
             raise ValueError("Invalid Tcp source-port range")
 
-        self._unused_sender_ports = iter(
+        # seconds a used source port must stay idle before it may be reused
+        self.portCooldown = portCooldown
+        self._fresh_ports = iter(
             port for port in range(self.senderPortMinimum, self.senderPortMaximum + 1)
             if port != self.senderPort
         )
-                            
-        self.portNumberFile = portNumberFile
+        # (port, time it was last used), oldest first
+        self._retired_ports = deque()
 
         # time to wait for a response from the server before concluding a timeout
         self.waitTime = waitTime
@@ -72,41 +75,26 @@ class Sender:
     def __str__(self):
         return "Sender with parameters: " + str(self.__dict__)
 
-    # TODO the functions pertaining to refreshing ports seem a bit odd, they read from a file. Couldn't they just increment the number instead?
-    # TODO I have changed this to select a port randomly, that could backfire if im unlucky enough to select a port which was very recently
-    # used, causing nondeterminism. I haven't run into problems yet though.
-
     def refreshNetworkPort(self):
-        """Use each source port at most once. """
-        try:
-            next_port = next(self._unused_sender_ports)
-        except StopIteration:
-            raise RuntimeError("No more unused sender ports available.") from None
+        """Use a fresh source port; after all are used, reuse the oldest once its cool-down has passed."""
+        if self.senderPortMinimum <= self.senderPort <= self.senderPortMaximum:
+            self._retired_ports.append((self.senderPort, time.monotonic()))
+
+        next_port = next(self._fresh_ports, None)
+        if next_port is None:
+            if not self._retired_ports:
+                raise RuntimeError("No sender ports available.")
+            next_port, last_used = self._retired_ports.popleft()
+            wait = last_used + self.portCooldown - time.monotonic()
+            if wait > 0:
+                print(f"*** All ports used; waiting {wait:.0f} s for port {next_port} to cool down ***")
+                time.sleep(wait)
+            print(f"*** Reusing port {next_port} ***")
 
         print(f"previous local port: {self.senderPort}")
         self.setSenderPort(next_port)
         print(f"next local port: {self.senderPort}\n")
         return self.senderPort
-                
-
-    # TODO the functions pertaining to refreshing ports seem a bit odd, they read from a file. Couldn't they just increment the number instead?
-    def getNextPort(self):
-        f = open(self.portNumberFile,"a+")
-        f.seek(0)
-        line = f.readline()
-        if line == '' or int(line) < self.senderPortMinimum:
-            networkPort = self.senderPortMinimum
-        else:
-            senderPortRange = self.senderPortMaximum - self.senderPortMinimum
-            if senderPortRange == 0:
-                networkPort = self.senderPortMinimum
-            else:
-                networkPort = self.senderPortMinimum + (int(line) + 1) % senderPortRange
-        f.close()
-        f = open(self.portNumberFile, "w")
-        f.write(str(networkPort))
-        f.close()
-        return networkPort
 
     def sendPacket(self,flagsSet, seqNr, ackNr):
         """Creates a packet and sends it over the network using scapy, the response is also gathered using scapy"""

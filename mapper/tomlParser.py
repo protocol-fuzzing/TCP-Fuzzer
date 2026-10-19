@@ -25,7 +25,10 @@ class TOMLParser:
                 "properties": {
                     "ip": {"type": "string"},
                     "port": {"type": "integer"},
-                    "waittime": {"type": "number"}
+                    "waittime": {"type": "number"},
+                    "sport_min": {"type": "integer", "minimum": 1, "maximum": 65535},
+                    "sport_max": {"type": "integer", "minimum": 1, "maximum": 65535},
+                    "port_cooldown": {"type": "number", "minimum": 0}
                 },
                 "required": ["ip", "port", "waittime"],
                 "additionalProperties": False
