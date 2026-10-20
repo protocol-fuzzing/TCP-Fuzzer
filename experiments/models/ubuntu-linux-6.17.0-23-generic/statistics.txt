@@ -6,7 +6,7 @@ Alphabet: [S, A, FA]
 -debug
 # -quiet
 -output
-output/o_2026-10-13_23-41-47
+output/o_2026-10-20_15-06-41
 
 ### LearnerConfigStandard Parameters
 -alphabet
@@ -26,7 +26,7 @@ RANDOM_WP_METHOD
 -eqvQueries
 1000
 -memQueryRuns
-3
+5
 -memQueryRetries
 3
 # -logQueries
@@ -81,18 +81,18 @@ Learning finished: true
 Size of the input alphabet: 3
 Number of states: 4
 Number of hypotheses: 2
-Number of inputs: 12614
-Number of tests: 1085
-Number of learning inputs: 255
-Number of learning tests: 81
-Number of inputs up to last hypothesis: 299
-Number of tests up to last hypothesis: 85
-Time (ms) to learn model: 14538699
+Number of inputs: 12784
+Number of tests: 1139
+Number of learning inputs: 425
+Number of learning tests: 135
+Number of inputs up to last hypothesis: 469
+Number of tests up to last hypothesis: 139
+Time (ms) to learn model: 22311066
 Counterexamples:
-CE 1:Query[ε|A A FA FA FA S FA FA S A FA / timeout timeout timeout timeout timeout SA_ACK1 FA_ACK1 timeout SA_ACK1 timeout FA_ACK1]
-Number of inputs when hypothesis was generated: [9, 299]
-Number of tests when hypothesis was generated: [9, 85]
-Time (ms) when hypothesis was generated: [19312, 408463]
-Number of inputs when counterexample was found: [53]
-Number of tests when counterexample was found: [13]
-Time (ms) when counterexample was found: [70383]
+CE 1:Query[ε|A A FA FA FA S FA FA S A FA / R R R R R SA_ACK1 FA_ACK1 timeout SA_ACK1 timeout FA_ACK1]
+Number of inputs when hypothesis was generated: [15, 469]
+Number of tests when hypothesis was generated: [15, 139]
+Time (ms) when hypothesis was generated: [48129, 975286]
+Number of inputs when counterexample was found: [59]
+Number of tests when counterexample was found: [19]
+Time (ms) when counterexample was found: [125022]

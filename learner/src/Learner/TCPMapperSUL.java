@@ -153,6 +153,14 @@ public class TCPMapperSUL
                 outputPayloadSize = outputPayloadHex.length() / 2;
             }
 
+            // The final component of a composite output such as
+            // "A|PA_DATA_1" describes the segment whose seq, ack and payload
+            // the mapper returned.
+            String finalResponseLabel = outputFlags.substring(
+                outputFlags.lastIndexOf('|') + 1
+            );
+            String finalResponseFlags = finalResponseLabel.replaceFirst("_.*$", ""); // "PA_ACK2_D1" -> "PA"
+
             if (outputFlags.contains("R")) {
                 startSeq = (
                     startSeq + ThreadLocalRandom.current().nextInt(10000, 30000)
@@ -166,8 +174,10 @@ public class TCPMapperSUL
                 // Payload bytes consume TCP sequence numbers.
                 int ackIncrement = outputPayloadSize;
 
-                // SYN and FIN each consume one TCP sequence number.
-                if (outputFlags.contains("S") || outputFlags.contains("F")) {
+                // SYN and FIN each consume one TCP sequence number. Only the
+                // final segment counts: an earlier SYN or FIN in the label is
+                // already included in the final segment's seq.
+                if (finalResponseFlags.contains("S") || finalResponseFlags.contains("F")) {
                     ackIncrement += 1;
                 }
 
@@ -175,12 +185,6 @@ public class TCPMapperSUL
             }
 
             String outputLabel = outputFlags;
-
-            // Check the final component of a composite output such as
-            // "A|PA_DATA_1".
-            String finalResponseLabel = outputFlags.substring(
-                outputFlags.lastIndexOf('|') + 1
-            );
 
             // Keep compatibility with mapper outputs that do not already
             // contain a payload annotation.

@@ -138,8 +138,11 @@ class Sender:
     def captureResponses(self, packet, waitTime):
         """Send packet and return every segment of its flow that arrives within waitTime."""
       
-        iface = conf.route.route(packet[IP].dst)[0]
-        bpf = (f"tcp and src host {packet[IP].dst} and src port {packet[TCP].dport} "
+        # A hostname destination (e.g. "localhost" in CI) is stored by scapy as a Net
+        # object, which conf.route.route() cannot handle; str() gives its address.
+        dst = str(packet[IP].dst)
+        iface = conf.route.route(dst)[0]
+        bpf = (f"tcp and src host {dst} and src port {packet[TCP].dport} "
                f"and dst host {packet[IP].src} and dst port {packet[TCP].sport}")
         # Open the socket before sending, so that no early reply is missed.
         # unlike sniff()'s default listen socket, an L2socket skips outgoing

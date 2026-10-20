@@ -2,8 +2,8 @@ digraph g {
 
 	s0 [shape="circle" label="s0"];
 	s0 -> s0 [label="S / SA_ACK1"];
-	s0 -> s0 [label="A / timeout"];
-	s0 -> s0 [label="FA / timeout"];
+	s0 -> s0 [label="A / R"];
+	s0 -> s0 [label="FA / R"];
 
 __start0 [label="" shape="none" width="0" height="0"];
 __start0 -> s0;

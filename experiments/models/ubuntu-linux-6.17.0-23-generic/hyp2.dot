@@ -5,9 +5,9 @@ digraph g {
 	s2 [shape="circle" label="s2"];
 	s3 [shape="circle" label="s3"];
 	s0 -> s1 [label="S / SA_ACK1"];
-	s0 -> s0 [label="A / timeout"];
-	s0 -> s0 [label="FA / timeout"];
-	s1 -> s0 [label="S / timeout"];
+	s0 -> s0 [label="A / R"];
+	s0 -> s0 [label="FA / R"];
+	s1 -> s0 [label="S / RA_ACK1"];
 	s1 -> s3 [label="A / timeout"];
 	s1 -> s2 [label="FA / FA_ACK1"];
 	s2 -> s2 [label="S / A"];
