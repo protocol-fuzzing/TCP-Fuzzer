@@ -1,4 +1,4 @@
-from scapy.all import sr, sr1, IP, TCP, Raw
+from scapy.all import send, sniff, conf, IP, TCP, Raw
 from response import Timeout, ConcreteResponse
 import re
 import time
@@ -135,6 +135,22 @@ class Sender:
             p = pIP / pTCP        
         return p
 
+    def captureResponses(self, packet, waitTime):
+        """Send packet and return every segment of its flow that arrives within waitTime."""
+      
+        iface = conf.route.route(packet[IP].dst)[0]
+        bpf = (f"tcp and src host {packet[IP].dst} and src port {packet[TCP].dport} "
+               f"and dst host {packet[IP].src} and dst port {packet[TCP].sport}")
+        # Open the socket before sending, so that no early reply is missed.
+        # unlike sniff()'s default listen socket, an L2socket skips outgoing
+        # packets, so a reply is not seen twice on the loopback interface.
+        sock = conf.L2socket(iface=iface, filter=bpf)
+        try:
+            send(packet, verbose=self.isVerbose)
+            return list(sniff(opened_socket=sock, timeout=waitTime))
+        finally:
+            sock.close()
+
     def sendAndRecv(self, packet, waitTime = None):
         """Sends a packet and retrieves a response"""
 
@@ -152,25 +168,13 @@ class Sender:
             # Remember where the Snort log ends before sending.
             dpi_marker = self.getDpiMarker()
             
-            # Used sr instead of sr1 to capture multiple responses 
-            # e.g. the Ubuntu server in response to FA, sometimes sends 
-            # two separate packets, one with 'A' flag and one with 'FA' flag, 
-            # instead of one packet with 'FA' flag.0
-            answered, unanswered = sr(packet, timeout=waitTime, verbose=self.isVerbose, multi=True)
-            responses = [rcv for snd, rcv in answered]
+            # Capture every segment of the flow, not only one reply:
+            # e.g. the Ubuntu server in response to FA, sometimes sends
+            # two separate packets, one with 'A' flag and one with 'FA' flag,
+            # instead of one packet with 'FA' flag.
+            responses = self.captureResponses(packet, waitTime)
 
-            # Drop responses addressed to the wrong port — these are stale packets from a
-            # previous test that used a different local port and arrived late.
-            expected_dport = self.senderPort
-            valid_responses = []
-            for resp in responses:
-                if resp['TCP'].dport != expected_dport:
-                    print(f'*** Dropping stale packet: dport={resp["TCP"].dport} expected {expected_dport} ***')
-                else:
-                    valid_responses.append(resp)
-            responses = valid_responses
-
-            # Deduplicate retransmissions across all sr() calls within this test.
+            # Deduplicate retransmissions across all captures within this test.
             # self.response_history is cleared on reset, so it spans exactly one test.
             unique_responses = []
            
@@ -670,8 +674,8 @@ class Sender:
             global seqVar, ackVar
             seqVar = response.seq
             ackVar = response.ack
-            self.lastRecvSeq = response.seq
-            self.lastRecvAck = response.ack
+            self.lastRecvSeq = response[TCP].seq
+            self.lastRecvAck = response[TCP].ack
         return response
 
     # resets by way of a valid reset. Requires a valid sequence number. Avoids problems encountered with the maximum

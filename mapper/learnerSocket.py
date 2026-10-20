@@ -214,13 +214,13 @@ class LearnerSocket:
             response_payload = response[Raw].load if response.haslayer(Raw) else b""
 
             if response_payload:
-                print('<- receive: ' + response_flags + " " + str(response.seq) + " " +
-                       str(response.ack) + " payload: " + response_payload.decode('latin-1') + "\n")
+                print('<- receive: ' + response_flags + " " + str(response[TCP].seq) + " " +
+                       str(response[TCP].ack) + " payload: " + response_payload.decode('latin-1') + "\n")
             else:
-                print('<- receive: ' + response_flags + " " + str(response.seq) + " " + 
-                      str(response.ack) + "\n")
-                
-            self.sendOutput(str(response.seq) + "," + str(response.ack) + "," + response_flags + 
+                print('<- receive: ' + response_flags + " " + str(response[TCP].seq) + " " +
+                      str(response[TCP].ack) + "\n")
+
+            self.sendOutput(str(response[TCP].seq) + "," + str(response[TCP].ack) + "," + response_flags +
                             "," + response_payload.hex() + "," + dpi_rule)
         else:
             print("received timeout \n")
