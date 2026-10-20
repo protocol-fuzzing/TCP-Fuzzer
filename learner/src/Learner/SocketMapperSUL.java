@@ -39,7 +39,7 @@ public class SocketMapperSUL {
             // Send input to SUL
             sockout.println(input);
 
-            return sockin.readLine();
+            return readReply();
         } catch (IOException e) {
             throw new MapperException("Input could not be sent", e);
         }
@@ -66,8 +66,8 @@ public class SocketMapperSUL {
         // to sending Input, allowing the possibility for the client to receive "reset INPUT" in one string. Reading in between
         // will force a break since reading is blocking.
         try {
-            String line = sockin.readLine();
-            if (!line.toString().equals("resetok")) {
+            String line = readReply();
+            if (!"resetok".equals(line)) {
                 throw new MapperException(
                     String.format(
                         "Reset did not succeed. On sending reset expected %s but got %s",
@@ -79,5 +79,20 @@ public class SocketMapperSUL {
         } catch (IOException e) {
             throw new MapperException("Reset could not be sent", e);
         }
+    }
+
+    /**
+     * Reads one reply line from the mapper.
+     * @return the reply line
+     * @throws MapperException if the mapper closed the connection
+     */
+    private String readReply() throws IOException {
+        String line = sockin.readLine();
+        if (line == null) {
+            throw new MapperException(
+                "Mapper closed the connection while the learner was waiting for its reply (check mapper.log)"
+            );
+        }
+        return line;
     }
 }
