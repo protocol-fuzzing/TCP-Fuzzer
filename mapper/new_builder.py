@@ -5,7 +5,6 @@
 # Modules which will be built
 from sender import Sender
 from learnerSocket import LearnerSocket
-from SUTSocket import SUTSocket
 
 # Parsing the arguments for those modules
 from tomlParser import TOMLParser
@@ -43,13 +42,6 @@ class Builder(object):
             dpiAlertsFile=dpi_alerts_file,
             dpiWaitTime=dpi_wait_time,
         )
-    
-    # builds the actionSender as a wrapper over the original sender component
-    def buildSUTSocket(self, sender):
-        values = self.argParser.parseArguments(args.actionSenderArguments, "actionSender")
-        values.update({"sender" : sender})
-        actionSender = SUTSocket(**values)
-        return actionSender
     
     def buildLearnerSocket(self):
         """Builds the socket which connects the sender to the learner"""

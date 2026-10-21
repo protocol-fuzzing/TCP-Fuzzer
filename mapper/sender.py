@@ -2,13 +2,8 @@ from scapy.all import send, sniff, conf, IP, TCP, Raw
 from response import Timeout, ConcreteResponse
 import re
 import time
-import random
 import os 
 from collections import deque
-
-# variables used to retain last sequence/acknowledgment sent
-seqVar = 0
-ackVar = 0
 
 
 class Sender:
@@ -322,153 +317,6 @@ class Sender:
         print(f'*** Merging responses:  {flag_strs} -> {merged_str} ***')
         return merged
 
-    @staticmethod
-    def tcp_seq_before(left, right):
-        """
-        Return True when left is before right in TCP's 32-bit
-        sequence-number space.
-
-        This comparison is valid when the compared sequence numbers
-        are less than 2**31 positions apart.
-        """
-        difference = (int(right) - int(left)) & 0xFFFFFFFF
-        return 0 < difference < 0x80000000
-
-
-    def merge_contiguous_responses(self, responses):
-    
-        if not responses:
-            return None
-
-        mask = 0xFFFFFFFF
-
-        # Combining these flags could change their meaning.
-        unsafe_flags = 0x04 | 0x20 | 0x40 | 0x80  # RST, URG, ECE, CWR
-
-        for packet in responses:
-            if int(packet[TCP].flags) & unsafe_flags:
-                return None
-
-        # Find the earliest TCP sequence number.
-        start_seq = int(responses[0][TCP].seq)
-
-        for packet in responses[1:]:
-            packet_seq = int(packet[TCP].seq)
-
-            if self.tcp_seq_before(packet_seq, start_seq):
-                start_seq = packet_seq
-
-        # Put the responses in TCP sequence order.
-        ordered = sorted(
-            responses,
-            key=lambda packet: (
-                int(packet[TCP].seq) - start_seq
-            ) & mask
-        )
-
-        merged_flags = 0
-        payload_parts = []
-        next_seq = start_seq
-        fin_seen = False
-        syn_seen = False
-
-        for packet in ordered:
-            flags = int(packet[TCP].flags)
-            packet_seq = int(packet[TCP].seq)
-
-            payload = (
-                bytes(packet[Raw].load)
-                if packet.haslayer(Raw)
-                else b""
-            )
-
-            has_syn = bool(flags & 0x02)
-            has_fin = bool(flags & 0x01)
-
-            merged_flags |= flags
-
-            # ACK-only packets consume no sequence numbers.
-            if not payload and not has_syn and not has_fin:
-                continue
-
-            # Payload/SYN/FIN packets must be consecutive.
-            if packet_seq != next_seq:
-                print(
-                    '*** Cannot merge responses: '
-                    f'expected seq={next_seq}, got seq={packet_seq} ***'
-                )
-                return None
-
-            # Do not accept data or another control after FIN.
-            if fin_seen:
-                return None
-
-            if has_syn:
-                if syn_seen or packet_seq != start_seq:
-                    return None
-
-                syn_seen = True
-
-            payload_parts.append(payload)
-
-            # Data bytes, SYN, and FIN consume sequence numbers.
-            consumed = len(payload)
-
-            if has_syn:
-                consumed += 1
-
-            if has_fin:
-                consumed += 1
-                fin_seen = True
-
-            next_seq = (next_seq + consumed) & mask
-
-        merged_payload = b"".join(payload_parts)
-
-        # Find the most advanced cumulative ACK.
-        ack_packets = [
-            packet
-            for packet in ordered
-            if int(packet[TCP].flags) & 0x10
-        ]
-
-        if ack_packets:
-            latest_ack = int(ack_packets[0][TCP].ack)
-
-            for packet in ack_packets[1:]:
-                packet_ack = int(packet[TCP].ack)
-
-                if self.tcp_seq_before(latest_ack, packet_ack):
-                    latest_ack = packet_ack
-        else:
-            latest_ack = int(ordered[0][TCP].ack)
-
-        # Start with a copy of the earliest response.
-        merged = ordered[0].copy()
-
-        merged[TCP].seq = start_seq
-        merged[TCP].ack = latest_ack
-        merged[TCP].flags = merged_flags
-
-        # Replace its payload with the complete collected payload.
-        merged[TCP].remove_payload()
-
-        if merged_payload:
-            merged[TCP].add_payload(Raw(load=merged_payload))
-
-        flag_names = ", ".join(
-            self.intToFlags(int(packet[TCP].flags))
-            for packet in ordered
-        )
-
-        print(
-            f'*** Merging responses: {flag_names} '
-            f'-> {self.intToFlags(merged_flags)}; '
-            f'payload length={len(merged_payload)} ***'
-        )
-
-        return merged
-
     def checkDpiConfiguration(self):
         """Check that the Snort alert file can be read."""
         if not os.path.isfile(self.dpiAlertsFile):
@@ -537,27 +385,6 @@ class Sender:
                 return False
 
             time.sleep(min(0.01, remaining_time))  # Sleep for a short interval before checking again
-
-        # Snort may write the alert asynchronously, so we wait a bit before reading the file.
-        time.sleep(self.dpiWaitTime)
-
-        try:
-            current_size = os.path.getsize(self.dpiAlertsFile)
-
-            # Handle a file that was cleared.
-            if current_size < marker:
-                marker = 0
-
-            with open(self.dpiAlertsFile, 'r', encoding='utf-8', errors="replace") as alert_file:
-                alert_file.seek(marker)
-                new_alerts = alert_file.read()
-
-        except OSError as error:
-            raise RuntimeError(f"Failed to read DPI alert file: {self.dpiAlertsFile}. Error: {error}")
-
-        # This is intentionally simple because there is currently one rule.
-        return "Mapper send Data" in new_alerts
-
 
     # FIXME possibly refactor response.py a bit, the names are confusing
     def scapyResponseParse(self, scapyResponse):
@@ -676,9 +503,6 @@ class Sender:
         if timeSpent < waitTime:
             time.sleep(waitTime - timeSpent)
         if type(response) is not Timeout:
-            global seqVar, ackVar
-            seqVar = response.seq
-            ackVar = response.ack
             self.lastRecvSeq = response[TCP].seq
             self.lastRecvAck = response[TCP].ack
         return response
@@ -712,13 +536,3 @@ class Sender:
 
     def shutdown(self):
         pass
-
-# example on how to run the sender
-if __name__ == "__main__":
-    print("main test")
-    sender = Sender(serverMAC="08:00:27:23:AA:AF", serverIP="131.174.142.227", serverPort=8000, useTracking=False, isVerbose=0, networkPortMinimum=20000, waitTime=1)
-    seq = 50
-    sender.refreshNetworkPort()
-    sender.sendInput("S", seq, 1, '') #SA svar seq+1 | SYN_REC
-    sender.sendInput("A", seq + 1, seqVar + 1, '') #A svar+1 seq+2 | CLOSE_WAIT
-    sender.sendInput("FA", seq + 1, seqVar + 1, '')
