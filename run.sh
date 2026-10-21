@@ -6,11 +6,17 @@ set -euo pipefail
 learner_config=$SCRIPT_DIR/config/learner_args
 mapper_config=$SCRIPT_DIR/config/mapperconfig.toml
 MAPPER_PID=""
+RST_RULE_ADDED=0
 
 # These values have to be consistent with the arguments in config
-#SERVER_PORT=9000
+SERVER_PORT=9000
 HOST=127.0.0.1
 MAPPER_PORT=18200
+
+# Only drop RSTs that go to the server: the mapper host's kernel sends these in reply
+# to SYN-ACKs aimed at the raw socket. With the SUT on localhost, the server's own RSTs
+# also pass through OUTPUT, so a rule without --dport would hide them from the mapper.
+RST_RULE=(OUTPUT -p tcp --dport "$SERVER_PORT" --tcp-flags RST RST -j DROP)
 
 
 # Clean up background processes on exit
@@ -19,15 +25,33 @@ cleanup() {
     if [[ -n "${MAPPER_PID:-}" ]]; then
         kill "$MAPPER_PID" 2>/dev/null || true
     fi
-  sudo iptables --flush OUTPUT
+    if [[ "$RST_RULE_ADDED" -eq 1 ]]; then
+        sudo iptables -D "${RST_RULE[@]}" 2>/dev/null || true
+    fi
 }
 trap cleanup EXIT
+
 
 start_mapper() {
     # Start TCP Mapper
     echo "Starting Mapper..."
+
+    # Clear alerts from previous runs so the Snort log does not grow indefinitely.
+    DPI_ALERT_FILE="/var/log/snort/alert_fast.txt"
+
+    if [[ -f "$DPI_ALERT_FILE" ]]; then
+        sudo truncate -s 0 "$DPI_ALERT_FILE"
+        echo "Cleared previous Snort alerts file."
+    fi
+
+    if sudo iptables -C "${RST_RULE[@]}" 2>/dev/null; then
+        RST_RULE_ADDED=0
+    else
+        sudo iptables -A "${RST_RULE[@]}"
+        RST_RULE_ADDED=1
+    fi
+
     (
-        sudo iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP
         source "$SCRIPT_DIR/mapper/.venv/bin/activate"
         echo sudo "$SCRIPT_DIR/mapper/.venv/bin/python" "$SCRIPT_DIR/mapper/main.py" "$mapper_config"
         sudo "$SCRIPT_DIR/mapper/.venv/bin/python" "$SCRIPT_DIR/mapper/main.py" "$mapper_config"
