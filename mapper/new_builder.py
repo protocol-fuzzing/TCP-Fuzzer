@@ -36,6 +36,7 @@ class Builder(object):
             serverIP=sut_config["ip"],
             serverPort=sut_config["port"],
             waitTime=sut_config["waittime"],
+            resetWait=sut_config.get("reset_wait", 0.1),
             senderPortMinimum=sut_config.get("sport_min", 1025),
             senderPortMaximum=sut_config.get("sport_max", 65535),
             portCooldown=sut_config.get("port_cooldown", 3600),

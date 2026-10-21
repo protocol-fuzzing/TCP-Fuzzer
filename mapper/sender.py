@@ -17,7 +17,7 @@ class Sender:
     def __init__(self, serverMAC=None, serverIP="191.168.10.1", serverPort = 7991,
              networkInterface="lo", networkInterfaceType=0, senderPort=15000, senderPortMinimum=1025,
              senderPortMaximum=65535, portCooldown=3600,
-             isVerbose=0, waitTime=0.1, resetMechanism=0, dpiAlertsFile=None, dpiWaitTime=0.05,): # increased default waitTime of server to 0.1 to capture multiple responses (sr)
+             isVerbose=0, waitTime=0.1, resetWait=0.1, resetMechanism=0, dpiAlertsFile=None, dpiWaitTime=0.05,): # increased default waitTime of server to 0.1 to capture multiple responses (sr)
         # data on sender and server needed to send packets
         self.serverIP = serverIP
         self.serverPort = serverPort
@@ -41,6 +41,8 @@ class Sender:
         # time to wait for a response from the server before concluding a timeout
         self.waitTime = waitTime
 
+        # time to pause after the reset RST, before the next query starts
+        self.resetWait = resetWait
 
         # TODO: need to remove this, the client should decide on the reset mechanism.
         self.resetMechanism = resetMechanism
@@ -681,6 +683,14 @@ class Sender:
             self.lastRecvAck = response[TCP].ack
         return response
 
+    def sendRawReset(self, seq):
+        """Send the RST that closes the server's connection after a query.
+        Its answer is never used, so there is no capture and no DPI poll; only a
+        short pause (resetWait) before the next query starts.
+        """
+        send(self.createPacket("R", seq, 0, ''), verbose=self.isVerbose)
+        time.sleep(self.resetWait)
+
     # resets by way of a valid reset. Requires a valid sequence number. Avoids problems encountered with the maximum
     # number of connections allowed on a port.
     def sendValidReset(self,seq):
@@ -694,6 +704,9 @@ class Sender:
     # can be altered, but I'd say in case learning involves many queries, use the other method.
     def sendReset(self):
         self.response_history.clear() # new test starts, forget seen packets.
+        # forget the old connection, so the next reset RST never uses its numbers.
+        self.lastRecvSeq = 0
+        self.lastRecvAck = 0
         self.refreshNetworkPort()
 
 
