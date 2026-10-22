@@ -50,7 +50,7 @@ class Sender:
         self.lastRecvAck = 0
         
 
-        # Tracks seen packets (by seq/ack/flags) across all sr() calls within one test,
+        # Tracks seen packets (by seq/ack/flags) across all captures within one test,
         # cleared on reset so duplicates/retransmissions within a test are filtered out.
         self.response_history = set()
 
@@ -180,12 +180,13 @@ class Sender:
            
             for resp in responses:
                 key = (resp['TCP'].seq, resp['TCP'].ack, int(resp['TCP'].flags))
-                # Ubuntu in synchronized states, upon receiving unexpected packetes (e.g. 'S' when in Established),
-                # responds with empty acknowledgment segement ('A') containing the current same sequenece number and 
-                # acknowledgment number and stays in the same state.
-                # we need to distinguish retransmissions from these empty acknowledgments that might be sent multiple times
-                # in response to multiple unexpected packets (They all have the same seq/ack/flags hence the same key in the history set).
-                if key in self.response_history and self.intToFlags(int(resp['TCP'].flags)) != 'A':
+                # TCP only retransmits segments that use sequence space (SYN, FIN
+                # or data). An identical A, R or RA is a new reply to a new
+                # segment, e.g. the same RST sent twice by a closed port, so
+                # only filter the others.
+                flags = int(resp['TCP'].flags)
+                usesSeqSpace = (flags & 0x03) != 0 or resp.haslayer(Raw)  # SYN or FIN, or data
+                if usesSeqSpace and key in self.response_history:
                     print('*** Retransmitted packet, ignoring duplicate: ' + str(resp['TCP'].flags) + " " + str(resp.seq) + " " + str(resp.ack) + ' ***')
                 else:
                     self.response_history.add(key)

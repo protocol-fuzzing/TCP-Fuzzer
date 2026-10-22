@@ -19,13 +19,28 @@ public class TCPMapper
     }
 
     /**
+     * How far the initial sequence number moves for a new connection after a
+     * reset. Our SYNs have no window scale option, so a window is at most
+     * 65535 and the old and new sequence numbers cannot overlap.
+     */
+    static final long NEW_ISN_STEP = 0x20000L;
+
+    /**
      * Takes a TCPInput and updates it's state according to the execution context
      * @param input the input to update
      * @param context the current execution context
      */
     public void updateInput(TCPInput input, TCPExecutionContext context) {
-        input.setSeq(context.getState().getSeq());
-        input.setAck(context.getState().getAck());
+        TCPState state = context.getState();
+        String flags = input.getFlags();
+        // A SYN after a reset opens a new connection, so it gets a new ISN.
+        // Other inputs keep the old numbers.
+        if (state.needsNewIsn() && flags.contains("S") && !flags.contains("A")) {
+            state.setSeq((state.getSeq() + NEW_ISN_STEP) & 0xFFFFFFFFL);
+            state.setNeedsNewIsn(false);
+        }
+        input.setSeq(state.getSeq());
+        input.setAck(state.getAck());
     }
 
     @Override

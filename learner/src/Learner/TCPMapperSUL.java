@@ -133,6 +133,12 @@ public class TCPMapperSUL
             socketSul.send(String.valueOf(in.getSeq()));
             socketSul.send(String.valueOf(in.getAck()));
             output = socketSul.sendAndRecv(inputPayload); // An empty string means this input has no payload.
+
+            // Sending RST closes our side of the connection, even though the
+            // server does not answer it.
+            if (in.getFlags().contains("R")) {
+                context.getState().setNeedsNewIsn(true);
+            }
         }
 
         if (output.equals("timeout") || output.startsWith("timeout")) {
@@ -162,11 +168,10 @@ public class TCPMapperSUL
             String finalResponseFlags = finalResponseLabel.replaceFirst("_.*$", ""); // "PA_ACK2_D1" -> "PA"
 
             if (outputFlags.contains("R")) {
-                startSeq = (
-                    startSeq + ThreadLocalRandom.current().nextInt(10000, 30000)
-                ) & 0xFFFFFFFFL; 
-                context.getState().setSeq(startSeq);
-                context.getState().setAck((startSeq + 1) & 0xFFFFFFFFL); 
+                // The server dropped the connection. Keep seq and ack as they
+                // are: the next input is sent as if we had missed the RST.
+                // Only a new SYN gets a new ISN.
+                context.getState().setNeedsNewIsn(true);
             } else {
                 // The response ACK becomes our next sequence number.
                 context.getState().setSeq(Long.parseLong(outputAck));
